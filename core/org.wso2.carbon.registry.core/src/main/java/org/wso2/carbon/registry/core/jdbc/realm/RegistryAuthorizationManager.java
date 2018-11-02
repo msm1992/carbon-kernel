@@ -26,6 +26,7 @@ import org.wso2.carbon.registry.core.utils.RegistryUtils;
 import org.wso2.carbon.user.core.AuthorizationManager;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreException;
+import org.wso2.carbon.user.core.authorization.JDBCAuthorizationManager;
 import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.HashMap;
@@ -369,17 +370,17 @@ public class RegistryAuthorizationManager implements AuthorizationManager {
         return getAuthorizationManager().getAllowedUIResourcesForUser(userName, permissionRootPath);
     }
 
-    /**
-     * Get the allowed UI resources for a role.
-     *
-     * @param roleName
-     * @param permissionRootPath
-     * @return
-     * @throws UserStoreException
-     */
     public String[] getAllowedUIResourcesForRole(String roleName, String permissionRootPath)
             throws UserStoreException {
-        return getAuthorizationManager().getAllowedUIResourcesForRole(roleName, permissionRootPath);
+        if (getAuthorizationManager() instanceof JDBCAuthorizationManager) {
+            return ((JDBCAuthorizationManager)getAuthorizationManager()).getAllowedUIResourcesForRole(
+                    roleName, permissionRootPath);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("getAllowedUIResourcesForRole operation is implemented in JDBCAuthorizationManager only");
+            }
+            throw new UserStoreException(new UnsupportedOperationException());
+        }
     }
 
     /**

@@ -515,10 +515,11 @@ public class JDBCAuthorizationManager implements AuthorizationManager {
             for (String resourceId : resourceIds) {
                 if (isRoleAuthorized(roleName, resourceId, CarbonConstants.UI_PERMISSION_ACTION)) {
                     if (permissionRootPath == null) {
-                        permissionRootPath = "/"; // Assign root path when permission path is null
-                    }
-                    if (resourceId.contains(permissionRootPath)) {
                         lstPermissions.add(resourceId);
+                    } else {
+                        if (resourceId.contains(permissionRootPath)) {
+                            lstPermissions.add(resourceId);
+                        }
                     }
                 }//authorization check up
             }//loop over resource list
