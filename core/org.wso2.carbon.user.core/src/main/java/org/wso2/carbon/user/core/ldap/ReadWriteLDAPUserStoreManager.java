@@ -326,10 +326,16 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             throws UserStoreException {
 
         if (!checkUserNameValid(userName)) {
+            String regularExpression = realmConfig.getUserStoreProperty(UserCoreConstants.RealmConfig
+                    .PROPERTY_USER_NAME_JAVA_REG_EX);
+            //Inorder to support both UsernameJavaRegEx and UserNameJavaRegEx.
+            if (StringUtils.isEmpty(regularExpression) || StringUtils.isEmpty(regularExpression.trim())) {
+                regularExpression = realmConfig.getUserStoreProperty(UserCoreConstants.RealmConfig
+                        .PROPERTY_USER_NAME_JAVA_REG);
+            }
             throw new UserStoreException(
                     "User name not valid. User name must be a non null string with following format, "
-                            + realmConfig
-                            .getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_USER_NAME_JAVA_REG_EX));
+                            + regularExpression);
         }
         if (!checkUserPasswordValid(credential)) {
             throw new UserStoreException(
