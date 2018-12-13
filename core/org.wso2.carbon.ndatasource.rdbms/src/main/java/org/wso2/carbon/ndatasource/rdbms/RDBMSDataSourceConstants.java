@@ -30,6 +30,8 @@ public class RDBMSDataSourceConstants {
 
 	public static final String STANDARD_JDBC_INTERCEPTORS = "ConnectionState;StatementFinalizer;";
 
+	public static final String JDBC_INTERCEPTOR_SEPARATOR = ";";
+
 	public static final class TX_ISOLATION_LEVELS {
 		
 		public static final String NONE = "NONE";
