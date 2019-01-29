@@ -225,7 +225,12 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
         try {
             dirContext = connectionSource.getContext();
             if (this.isReadOnly()) {
-                log.info("LDAP connection created successfully in read-only mode");
+                if (LDAPConnectionContext.enableStartTLS && LDAPConnectionContext.startTlsResponse != null) {
+                    log.info("LDAP secure connection created successfully in read-only mode " +
+                            "using StartTLS extended operation");
+                } else {
+                    log.info("LDAP connection created successfully in read-only mode");
+                }
             }
         } catch (Exception e) {
             String errorMessage = "Cannot create connection to LDAP server. Error message " +
@@ -235,6 +240,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             }
             throw new UserStoreException(errorMessage, e);
         } finally {
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             JNDIUtil.closeContext(dirContext);
         }
         this.userRealm = realm;
@@ -704,6 +710,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             // close the naming enumeration and free up resources
             JNDIUtil.closeNamingEnumeration(attrs);
             JNDIUtil.closeNamingEnumeration(answer);
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             // close directory context
             JNDIUtil.closeContext(dirContext);
         }
@@ -787,6 +794,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             }
         } finally {
             JNDIUtil.closeNamingEnumeration(answer);
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             JNDIUtil.closeContext(dirContext);
         }
         if (debug) {
@@ -1029,6 +1037,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             throw new UserStoreException(errorMessage, e);
         } finally {
             JNDIUtil.closeNamingEnumeration(answer);
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             JNDIUtil.closeContext(dirContext);
         }
         return userNames;
@@ -1164,6 +1173,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             }
 
         } finally {
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             JNDIUtil.closeContext(cxt);
         }
 
@@ -1247,6 +1257,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             }
 
         } finally {
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             JNDIUtil.closeContext(cxt);
         }
 
@@ -1445,6 +1456,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             throw new UserStoreException(errorMessage, e);
         } finally {
             JNDIUtil.closeNamingEnumeration(answer);
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             JNDIUtil.closeContext(dirContext);
         }
 
@@ -1920,6 +1932,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             throw new UserStoreException(errorMessage, e);
         } finally {
             JNDIUtil.closeNamingEnumeration(answer);
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             JNDIUtil.closeContext(dirContext);
         }
 
@@ -2285,6 +2298,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             log.debug(e.getMessage(), e);
         } finally {
             JNDIUtil.closeNamingEnumeration(answer);
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             JNDIUtil.closeContext(dirContext);
         }
         return userDN;
@@ -2395,6 +2409,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             throw new UserStoreException(e.getMessage(), e);
         } finally {
             JNDIUtil.closeNamingEnumeration(answer);
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             JNDIUtil.closeContext(dirContext);
         }
 
@@ -2446,6 +2461,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             }
         } finally {
             JNDIUtil.closeNamingEnumeration(answer);
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             JNDIUtil.closeContext(dirContext);
         }
         return list;
@@ -2519,6 +2535,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             return names;
         } finally {
             JNDIUtil.closeNamingEnumeration(answer);
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             JNDIUtil.closeContext(dirContext);
         }
     }
@@ -2637,6 +2654,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             // close the naming enumeration and free up resources
             JNDIUtil.closeNamingEnumeration(attrs);
             JNDIUtil.closeNamingEnumeration(answer);
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             // close directory context
             JNDIUtil.closeContext(dirContext);
         }
@@ -2698,6 +2716,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
                     e.getMessage()));
             throw new UserStoreException(e.getMessage(), e);
         } finally {
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             JNDIUtil.closeContext(dirContext);
             JNDIUtil.closeContext(ldapContext);
         }
@@ -3266,6 +3285,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
                     claimSearch.getSearchFilterQuery(), e.getMessage()));
             throw new UserStoreException(e.getMessage(), e);
         } finally {
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             JNDIUtil.closeContext(claimSearchDirContext);
             JNDIUtil.closeNamingEnumeration(tempAnswer);
         }
@@ -3521,6 +3541,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
                 }
             } finally {
                 JNDIUtil.closeNamingEnumeration(answer);
+                JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
                 JNDIUtil.closeContext(dirContext);
             }
         }
@@ -3791,6 +3812,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             }
             throw new UserStoreException(errorMessage, e);
         } finally {
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             JNDIUtil.closeContext(dirContext);
         }
         return groupNameAttributeValues;

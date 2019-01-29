@@ -21,9 +21,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.user.core.UserStoreException;
 
+import java.io.IOException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.DirContext;
+import javax.naming.ldap.StartTlsResponse;
 
 public class JNDIUtil {
 
@@ -58,4 +60,19 @@ public class JNDIUtil {
 
     }
 
+    /**
+     * Util method to close the used startTLS connection.
+     */
+    public static void closeStartTLS(StartTlsResponse startTlsResponse) {
+
+        if (startTlsResponse != null) {
+            try {
+                startTlsResponse.close();
+                log.debug("Closing the StartTLS connection with LDAP server");
+            } catch (IOException e) {
+                String errorMessage = "Error in closing StartTLS connection.";
+                log.error(errorMessage, e);
+            }
+        }
+    }
 }

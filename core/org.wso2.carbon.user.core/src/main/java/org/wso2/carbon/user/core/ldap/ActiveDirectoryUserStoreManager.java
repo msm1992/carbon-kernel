@@ -206,6 +206,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
             throw new UserStoreException(errorMessage, e);
         } finally {
             credentialObj.clear();
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             JNDIUtil.closeContext(dirContext);
         }
     }
@@ -323,6 +324,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
         } finally {
             credentialObj.clear();
             JNDIUtil.closeNamingEnumeration(searchResults);
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             JNDIUtil.closeContext(subDirContext);
             JNDIUtil.closeContext(dirContext);
         }
@@ -395,6 +397,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
             throw new UserStoreException(error, e);
         } finally {
             JNDIUtil.closeNamingEnumeration(searchResults);
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             JNDIUtil.closeContext(subDirContext);
             JNDIUtil.closeContext(dirContext);
         }
@@ -437,10 +440,10 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
 
         String connectionURL = realmConfig.getUserStoreProperty(LDAPConstants.CONNECTION_URL);
         String[] array = connectionURL.split(":");
-        if (array[0].equals("ldaps")) {
+        if (array[0].equals("ldaps") || (LDAPConnectionContext.enableStartTLS)) {
             this.isSSLConnection = true;
         } else {
-            logger.warn("Connection to the Active Directory is not secure. Passowrd involved operations such as update credentials and adduser operations will fail");
+            logger.warn("Connection to the Active Directory is not secure. Password involved operations such as update credentials and adduser operations will fail");
         }
     }
 
@@ -599,6 +602,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
         } catch (Exception e) {
             handleException(e, userName);
         } finally {
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             JNDIUtil.closeContext(subDirContext);
             JNDIUtil.closeContext(dirContext);
         }
@@ -686,6 +690,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
         } catch (Exception e) {
             handleException(e, userName);
         } finally {
+            JNDIUtil.closeStartTLS(LDAPConnectionContext.startTlsResponse);
             JNDIUtil.closeContext(subDirContext);
             JNDIUtil.closeContext(dirContext);
         }
