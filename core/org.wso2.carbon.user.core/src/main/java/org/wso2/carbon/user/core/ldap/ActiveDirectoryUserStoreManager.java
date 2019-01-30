@@ -440,7 +440,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
 
         String connectionURL = realmConfig.getUserStoreProperty(LDAPConstants.CONNECTION_URL);
         String[] array = connectionURL.split(":");
-        if (array[0].equals("ldaps") || (LDAPConnectionContext.enableStartTLS)) {
+        if (array[0].equals("ldaps") || (this.connectionSource.enableStartTLS)) {
             this.isSSLConnection = true;
         } else {
             logger.warn("Connection to the Active Directory is not secure. Password involved operations such as update credentials and adduser operations will fail");

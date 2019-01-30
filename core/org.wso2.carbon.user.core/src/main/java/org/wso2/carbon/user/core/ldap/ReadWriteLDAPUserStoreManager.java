@@ -51,8 +51,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.StringTokenizer;
 import java.util.regex.Pattern;
-import javax.naming.CompositeName;
-import javax.naming.InvalidNameException;
 import javax.naming.Name;
 import javax.naming.NameParser;
 import javax.naming.NamingEnumeration;
@@ -162,7 +160,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
         DirContext dirContext = null;
         try {
             dirContext = connectionSource.getContext();
-            if (LDAPConnectionContext.enableStartTLS && LDAPConnectionContext.startTlsResponse != null) {
+            if (this.connectionSource.enableStartTLS && LDAPConnectionContext.startTlsResponse != null) {
                 log.info("LDAP secure connection created successfully in read-write mode " +
                         "using StartTLS extended operation");
             } else {
