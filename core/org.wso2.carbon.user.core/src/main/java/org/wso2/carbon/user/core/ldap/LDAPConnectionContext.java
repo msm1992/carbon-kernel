@@ -534,7 +534,6 @@ public class LDAPConnectionContext {
         } else {
             return InitializeLdapContext(environment, connectionControls);
         }
-
     }
 
     /**
