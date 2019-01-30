@@ -62,12 +62,14 @@ public class JNDIUtil {
 
     /**
      * Util method to close the used startTLS connection.
+     *
+     * @param startTlsConnection
      */
-    public static void closeStartTLS(StartTlsResponse startTlsResponse) {
+    public static void closeStartTLSConnection(StartTlsResponse startTlsConnection) {
 
-        if (startTlsResponse != null) {
+        if (startTlsConnection != null) {
             try {
-                startTlsResponse.close();
+                startTlsConnection.close();
                 log.debug("Closing the StartTLS connection with LDAP server");
             } catch (IOException e) {
                 String errorMessage = "Error in closing StartTLS connection.";

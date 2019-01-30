@@ -93,6 +93,6 @@ public class LDAPConstants {
     public static final String CONNECTION_POOLING_ENABLED = "ConnectionPoolingEnabled";
     public static final String USER_CACHE_EXPIRY_MILLISECONDS = "UserCacheExpiryMilliseconds";
     public static final String USER_DN_CACHE_ENABLED = "UserDNCacheEnabled";
-    //Property to enable StartTLS connection with LDAP server.
-    public static final String ENABLE_STARTTLS_OPTION = "StartTLSEnabled";
+    //Property to enable TLS connection with LDAP server using StartTLS extended operation.
+    public static final String STARTTLS_ENABLED = "StartTLSEnabled";
 }

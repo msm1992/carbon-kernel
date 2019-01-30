@@ -81,8 +81,8 @@ public class LDAPConnectionContext {
     private static final String CORRELATION_LOG_SEPARATOR = "|";
     private static final String CORRELATION_LOG_SYSTEM_PROPERTY = "enableCorrelationLogs";
 
-    protected boolean enableStartTLS;
-    protected static StartTlsResponse startTlsResponse = null;
+    private boolean STARTTLS_ENABLED;
+    private StartTlsResponse startTlsConnection = null;
 
     static {
         String initialContextFactoryClassSystemProperty = System.getProperty(Context.INITIAL_CONTEXT_FACTORY);
@@ -201,7 +201,7 @@ public class LDAPConnectionContext {
         }
 
         //Set StartTLS option if provided in the configuration. Otherwise normal connection.
-        enableStartTLS = Boolean.parseBoolean(realmConfig.getUserStoreProperty(LDAPConstants.ENABLE_STARTTLS_OPTION));
+        STARTTLS_ENABLED = Boolean.parseBoolean(realmConfig.getUserStoreProperty(LDAPConstants.STARTTLS_ENABLED));
     }
 
     public DirContext getContext() throws UserStoreException {
@@ -515,7 +515,7 @@ public class LDAPConnectionContext {
             final Class[] proxyInterfaces = new Class[]{LdapContext.class};
             long start = System.currentTimeMillis();
 
-            LdapContext context = InitialLdapContextWithSecureConnection(environment, connectionControls);
+            LdapContext context = InitializeLdapContext(environment, connectionControls);
 
             Object proxy = Proxy.newProxyInstance(LDAPConnectionContext.class.getClassLoader(), proxyInterfaces,
                     new LdapContextInvocationHandler(context));
@@ -532,13 +532,13 @@ public class LDAPConnectionContext {
             logDetails(correlationLogDTO);
             return (LdapContext) proxy;
         } else {
-            return InitialLdapContextWithSecureConnection(environment, connectionControls);
+            return InitializeLdapContext(environment, connectionControls);
         }
 
     }
 
     /**
-     * Initialize the LDAP context with secured connection by applying StartTLS option if specified.
+     * Initialize the LDAP context.
      *
      * @param environment
      * @param connectionControls
@@ -546,43 +546,56 @@ public class LDAPConnectionContext {
      * @throws NamingException
      * @throws UserStoreException
      */
-    private LdapContext InitialLdapContextWithSecureConnection(Hashtable<?, ?> environment,
-                                                               Control[] connectionControls)
+    private LdapContext InitializeLdapContext(Hashtable<?, ?> environment, Control[] connectionControls)
             throws NamingException, UserStoreException {
 
-        if (enableStartTLS) {
-            //create a temp environment for this startTLS session by copying the original environment
-            Hashtable<String, Object> tempEnv = new Hashtable<>();
-            for (Object key : environment.keySet()) {
-                if (!(Context.SECURITY_PRINCIPAL.equals(key) || Context.SECURITY_CREDENTIALS.equals(key) ||
-                        Context.SECURITY_AUTHENTICATION.equals(key))) {
-                    tempEnv.put((String) key, environment.get(key));
-                }
-            }
-            LdapContext ldapContext = new InitialLdapContext(tempEnv, connectionControls);
-            try {
-                startTlsResponse = (StartTlsResponse) ldapContext.extendedOperation(new StartTlsRequest());
-                startTlsResponse.negotiate();
-                log.debug("StartTLS connection established successfully with LDAP server");
-                if (environment.containsKey(Context.SECURITY_AUTHENTICATION)) {
-                    ldapContext.addToEnvironment(Context.SECURITY_AUTHENTICATION,
-                            environment.get(Context.SECURITY_AUTHENTICATION));
-                }
-                if (environment.containsKey(Context.SECURITY_PRINCIPAL)) {
-                    ldapContext.addToEnvironment(Context.SECURITY_PRINCIPAL,
-                            environment.get(Context.SECURITY_PRINCIPAL));
-                }
-                if (environment.containsKey(Context.SECURITY_CREDENTIALS)) {
-                    ldapContext.addToEnvironment(Context.SECURITY_CREDENTIALS,
-                            environment.get(Context.SECURITY_CREDENTIALS));
-                }
-                return ldapContext;
-            } catch (IOException e) {
-                log.error("Error occurred while establishing the StartTLS connection", e);
-                throw new UserStoreException("Unable to establish the StartTLS connection", e);
-            }
+        if (STARTTLS_ENABLED) {
+            return performSecuredLdapInitialization(environment, connectionControls);
         } else {
             return new InitialLdapContext(environment, connectionControls);
+        }
+    }
+
+    /**
+     * Initialize the LDAP context with secured connection by applying StartTLS extended operation.
+     *
+     * @param environment
+     * @param connectionControls
+     * @return
+     * @throws NamingException
+     * @throws UserStoreException
+     */
+    private LdapContext performSecuredLdapInitialization(Hashtable<?, ?> environment, Control[] connectionControls)
+            throws NamingException, UserStoreException {
+
+        Hashtable<String, Object> tempEnv = new Hashtable<>();
+        for (Object key : environment.keySet()) {
+            if (!(Context.SECURITY_PRINCIPAL.equals(key) || Context.SECURITY_CREDENTIALS.equals(key) ||
+                    Context.SECURITY_AUTHENTICATION.equals(key))) {
+                tempEnv.put((String) key, environment.get(key));
+            }
+        }
+        LdapContext ldapContext = new InitialLdapContext(tempEnv, connectionControls);
+        try {
+            startTlsConnection = (StartTlsResponse) ldapContext.extendedOperation(new StartTlsRequest());
+            startTlsConnection.negotiate();
+            log.debug("StartTLS connection established successfully with LDAP server");
+            if (environment.containsKey(Context.SECURITY_AUTHENTICATION)) {
+                ldapContext.addToEnvironment(Context.SECURITY_AUTHENTICATION,
+                        environment.get(Context.SECURITY_AUTHENTICATION));
+            }
+            if (environment.containsKey(Context.SECURITY_PRINCIPAL)) {
+                ldapContext.addToEnvironment(Context.SECURITY_PRINCIPAL,
+                        environment.get(Context.SECURITY_PRINCIPAL));
+            }
+            if (environment.containsKey(Context.SECURITY_CREDENTIALS)) {
+                ldapContext.addToEnvironment(Context.SECURITY_CREDENTIALS,
+                        environment.get(Context.SECURITY_CREDENTIALS));
+            }
+            return ldapContext;
+        } catch (IOException e) {
+            log.error("Error occurred while establishing the StartTLS connection", e);
+            throw new UserStoreException("Unable to establish the StartTLS connection", e);
         }
     }
 
@@ -702,5 +715,15 @@ public class LDAPConnectionContext {
             count++;
         }
         return sb.toString();
+    }
+
+    /**
+     * Get StartTLS response object.
+     *
+     * @return
+     */
+    public StartTlsResponse getStartTlsConnection() {
+
+        return this.startTlsConnection;
     }
 }
