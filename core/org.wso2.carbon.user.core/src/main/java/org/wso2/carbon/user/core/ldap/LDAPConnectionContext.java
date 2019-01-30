@@ -80,8 +80,7 @@ public class LDAPConnectionContext {
     private static final int CORRELATION_LOG_INITIALIZATION_ARGS_LENGTH = 0;
     private static final String CORRELATION_LOG_SEPARATOR = "|";
     private static final String CORRELATION_LOG_SYSTEM_PROPERTY = "enableCorrelationLogs";
-
-    private boolean STARTTLS_ENABLED;
+    private boolean startTLSEnabled;
     private StartTlsResponse startTlsConnection = null;
 
     static {
@@ -201,7 +200,7 @@ public class LDAPConnectionContext {
         }
 
         //Set StartTLS option if provided in the configuration. Otherwise normal connection.
-        STARTTLS_ENABLED = Boolean.parseBoolean(realmConfig.getUserStoreProperty(LDAPConstants.STARTTLS_ENABLED));
+        startTLSEnabled = Boolean.parseBoolean(realmConfig.getUserStoreProperty(LDAPConstants.STARTTLS_ENABLED));
     }
 
     public DirContext getContext() throws UserStoreException {
@@ -548,7 +547,7 @@ public class LDAPConnectionContext {
     private LdapContext InitializeLdapContext(Hashtable<?, ?> environment, Control[] connectionControls)
             throws NamingException, UserStoreException {
 
-        if (STARTTLS_ENABLED) {
+        if (startTLSEnabled) {
             return performSecuredLdapInitialization(environment, connectionControls);
         } else {
             return new InitialLdapContext(environment, connectionControls);
@@ -568,6 +567,7 @@ public class LDAPConnectionContext {
             throws NamingException, UserStoreException {
 
         Hashtable<String, Object> tempEnv = new Hashtable<>();
+        //create a temp env for this particular connection by eliminating user credentials details from original env.
         for (Object key : environment.keySet()) {
             if (!(Context.SECURITY_PRINCIPAL.equals(key) || Context.SECURITY_CREDENTIALS.equals(key) ||
                     Context.SECURITY_AUTHENTICATION.equals(key))) {
@@ -578,7 +578,10 @@ public class LDAPConnectionContext {
         try {
             startTlsConnection = (StartTlsResponse) ldapContext.extendedOperation(new StartTlsRequest());
             startTlsConnection.negotiate();
-            log.debug("StartTLS connection established successfully with LDAP server");
+            if (log.isDebugEnabled()) {
+                log.debug("StartTLS connection established successfully with LDAP server");
+            }
+            //Adding provided user credentials details one by one after TLS connection started.
             if (environment.containsKey(Context.SECURITY_AUTHENTICATION)) {
                 ldapContext.addToEnvironment(Context.SECURITY_AUTHENTICATION,
                         environment.get(Context.SECURITY_AUTHENTICATION));

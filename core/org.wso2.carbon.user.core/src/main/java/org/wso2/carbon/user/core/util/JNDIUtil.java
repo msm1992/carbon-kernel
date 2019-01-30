@@ -70,9 +70,11 @@ public class JNDIUtil {
         if (startTlsConnection != null) {
             try {
                 startTlsConnection.close();
-                log.debug("Closing the StartTLS connection with LDAP server");
+                if (log.isDebugEnabled()) {
+                    log.debug("Closing the StartTLS connection with LDAP server");
+                }
             } catch (IOException e) {
-                String errorMessage = "Error in closing StartTLS connection.";
+                String errorMessage = "Error occurred when closing StartTLS connection.";
                 log.error(errorMessage, e);
             }
         }
