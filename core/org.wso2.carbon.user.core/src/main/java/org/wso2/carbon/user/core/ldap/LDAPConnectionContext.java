@@ -199,7 +199,7 @@ public class LDAPConnectionContext {
             environment.put("com.sun.jndi.ldap.read.timeout",readTimeout);
         }
 
-        //Set StartTLS option if provided in the configuration. Otherwise normal connection.
+        // Set StartTLS option if provided in the configuration. Otherwise normal connection.
         startTLSEnabled = Boolean.parseBoolean(realmConfig.getUserStoreProperty(LDAPConstants.STARTTLS_ENABLED));
     }
 
@@ -230,7 +230,7 @@ public class LDAPConnectionContext {
                 SRVRecord firstRecord = dcMap.get(firstKey);
                 //compose the connection URL
                 environment.put(Context.PROVIDER_URL, getLDAPURLFromSRVRecord(firstRecord));
-                context = getLdapContext(environment,null);
+                context = getLdapContext(environment, null);
 
             } catch (NamingException e) {
                 log.error("Error obtaining connection to first Domain Controller." + e.getMessage(), e);
@@ -538,11 +538,11 @@ public class LDAPConnectionContext {
     /**
      * Initialize the LDAP context.
      *
-     * @param environment
-     * @param connectionControls
-     * @return
-     * @throws NamingException
-     * @throws UserStoreException
+     * @param environment        environment used to create the initial Context.
+     * @param connectionControls connection request controls for the initial context.
+     * @return ldap connection context.
+     * @throws NamingException    if a naming exception is encountered.
+     * @throws UserStoreException if a user store related exception is encountered.
      */
     private LdapContext InitializeLdapContext(Hashtable<?, ?> environment, Control[] connectionControls)
             throws NamingException, UserStoreException {
@@ -557,23 +557,16 @@ public class LDAPConnectionContext {
     /**
      * Initialize the LDAP context with secured connection by applying StartTLS extended operation.
      *
-     * @param environment
-     * @param connectionControls
-     * @return
-     * @throws NamingException
-     * @throws UserStoreException
+     * @param environment        environment used to create the initial Context.
+     * @param connectionControls connection request controls for the initial context.
+     * @return secured ldap connection context.
+     * @throws NamingException    if a naming exception is encountered.
+     * @throws UserStoreException if a user store related exception is encountered.
      */
     private LdapContext performSecuredLdapInitialization(Hashtable<?, ?> environment, Control[] connectionControls)
             throws NamingException, UserStoreException {
 
-        Hashtable<String, Object> tempEnv = new Hashtable<>();
-        //create a temp env for this particular connection by eliminating user credentials details from original env.
-        for (Object key : environment.keySet()) {
-            if (!(Context.SECURITY_PRINCIPAL.equals(key) || Context.SECURITY_CREDENTIALS.equals(key) ||
-                    Context.SECURITY_AUTHENTICATION.equals(key))) {
-                tempEnv.put((String) key, environment.get(key));
-            }
-        }
+        Hashtable<String, Object> tempEnv = getEnvironmentForSecuredLdapInitialization(environment);
         LdapContext ldapContext = new InitialLdapContext(tempEnv, connectionControls);
         try {
             startTlsConnection = (StartTlsResponse) ldapContext.extendedOperation(new StartTlsRequest());
@@ -581,23 +574,55 @@ public class LDAPConnectionContext {
             if (log.isDebugEnabled()) {
                 log.debug("StartTLS connection established successfully with LDAP server");
             }
-            //Adding provided user credentials details one by one after TLS connection started.
-            if (environment.containsKey(Context.SECURITY_AUTHENTICATION)) {
-                ldapContext.addToEnvironment(Context.SECURITY_AUTHENTICATION,
-                        environment.get(Context.SECURITY_AUTHENTICATION));
-            }
-            if (environment.containsKey(Context.SECURITY_PRINCIPAL)) {
-                ldapContext.addToEnvironment(Context.SECURITY_PRINCIPAL,
-                        environment.get(Context.SECURITY_PRINCIPAL));
-            }
-            if (environment.containsKey(Context.SECURITY_CREDENTIALS)) {
-                ldapContext.addToEnvironment(Context.SECURITY_CREDENTIALS,
-                        environment.get(Context.SECURITY_CREDENTIALS));
-            }
+            performAuthenticationIfProvided(environment, ldapContext);
             return ldapContext;
         } catch (IOException e) {
             log.error("Error occurred while establishing the StartTLS connection", e);
             throw new UserStoreException("Unable to establish the StartTLS connection", e);
+        }
+    }
+
+    /**
+     * Get environment variables to initialize secured LDAP context.
+     *
+     * @param environment environment used to create the initial Context.
+     * @return environment.
+     */
+    private Hashtable<String, Object> getEnvironmentForSecuredLdapInitialization(Hashtable<?, ?> environment) {
+
+        Hashtable<String, Object> tempEnv = new Hashtable<>();
+        // Create a temp env for this particular connection by eliminating user credentials details from original env.
+        for (Object key : environment.keySet()) {
+            if (!Context.SECURITY_PRINCIPAL.equals(key) && !Context.SECURITY_CREDENTIALS.equals(key) &&
+                    !Context.SECURITY_AUTHENTICATION.equals(key)) {
+                tempEnv.put((String) key, environment.get(key));
+            }
+        }
+        return tempEnv;
+    }
+
+    /**
+     * Perform simple client authentication.
+     *
+     * @param environment environment used to create the initial Context.
+     * @param ldapContext secured ldap connection context.
+     * @throws NamingException if a naming exception is encountered.
+     */
+    private void performAuthenticationIfProvided(Hashtable<?, ?> environment, LdapContext ldapContext)
+            throws NamingException {
+
+        // Adding provided user credentials details one by one after TLS connection started.
+        if (environment.containsKey(Context.SECURITY_AUTHENTICATION)) {
+            ldapContext.addToEnvironment(Context.SECURITY_AUTHENTICATION,
+                    environment.get(Context.SECURITY_AUTHENTICATION));
+        }
+        if (environment.containsKey(Context.SECURITY_PRINCIPAL)) {
+            ldapContext.addToEnvironment(Context.SECURITY_PRINCIPAL,
+                    environment.get(Context.SECURITY_PRINCIPAL));
+        }
+        if (environment.containsKey(Context.SECURITY_CREDENTIALS)) {
+            ldapContext.addToEnvironment(Context.SECURITY_CREDENTIALS,
+                    environment.get(Context.SECURITY_CREDENTIALS));
         }
     }
 
@@ -722,7 +747,7 @@ public class LDAPConnectionContext {
     /**
      * Get StartTLS response object.
      *
-     * @return
+     * @return startTLSResponse.
      */
     public StartTlsResponse getStartTlsConnection() {
 

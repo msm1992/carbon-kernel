@@ -919,8 +919,8 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
                 USER_CACHE_EXPIRY_TIME_ATTRIBUTE_DESCRIPTION);
         setAdvancedProperty(LDAPConstants.USER_DN_CACHE_ENABLED, USER_DN_CACHE_ENABLED_ATTRIBUTE_NAME, "true",
                 USER_DN_CACHE_ENABLED_ATTRIBUTE_DESCRIPTION);
-        setAdvancedProperty(LDAPConstants.STARTTLS_ENABLED, "Enable StartTLS", "false",
-                "Enable secure connection by using StartTLS extended operation in LDAP");
+        setAdvancedProperty(LDAPConstants.STARTTLS_ENABLED, UserStoreConfigConstants.STARTTLS_ENABLED_ATTRIBUTE_NAME,
+                "false", UserStoreConfigConstants.STARTTLS_ENABLED_ATTRIBUTE_NAME_DESCRIPTION);
     }
 
 
