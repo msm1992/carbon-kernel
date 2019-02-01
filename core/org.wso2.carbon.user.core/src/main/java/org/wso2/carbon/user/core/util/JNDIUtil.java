@@ -63,7 +63,7 @@ public class JNDIUtil {
     /**
      * Util method to close the used startTLS connection.
      *
-     * @param startTlsConnection
+     * @param startTlsConnection used StartTLS connection.
      */
     public static void closeStartTLSConnection(StartTlsResponse startTlsConnection) {
 
