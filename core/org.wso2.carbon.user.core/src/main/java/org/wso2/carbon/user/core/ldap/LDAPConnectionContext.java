@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.UserStoreConfigConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.dto.CorrelationLogDTO;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -200,7 +201,8 @@ public class LDAPConnectionContext {
         }
 
         // Set StartTLS option if provided in the configuration. Otherwise normal connection.
-        startTLSEnabled = Boolean.parseBoolean(realmConfig.getUserStoreProperty(LDAPConstants.STARTTLS_ENABLED));
+        startTLSEnabled = Boolean.parseBoolean(realmConfig.getUserStoreProperty(
+                UserStoreConfigConstants.STARTTLS_ENABLED));
     }
 
     public DirContext getContext() throws UserStoreException {
@@ -230,7 +232,7 @@ public class LDAPConnectionContext {
                 SRVRecord firstRecord = dcMap.get(firstKey);
                 //compose the connection URL
                 environment.put(Context.PROVIDER_URL, getLDAPURLFromSRVRecord(firstRecord));
-                context = getLdapContext(environment, null);
+                context = getLdapContext(environment,null);
 
             } catch (NamingException e) {
                 log.error("Error obtaining connection to first Domain Controller." + e.getMessage(), e);

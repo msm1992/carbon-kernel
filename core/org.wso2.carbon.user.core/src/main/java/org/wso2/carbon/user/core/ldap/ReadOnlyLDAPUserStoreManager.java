@@ -226,7 +226,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             dirContext = connectionSource.getContext();
             if (this.isReadOnly()) {
                 boolean startTLSEnabled = Boolean.parseBoolean(
-                        realmConfig.getUserStoreProperty(LDAPConstants.STARTTLS_ENABLED));
+                        realmConfig.getUserStoreProperty(UserStoreConfigConstants.STARTTLS_ENABLED));
                 if (startTLSEnabled && this.connectionSource.getStartTlsConnection() != null) {
                     log.info("LDAP secure connection created successfully in read-only mode " +
                             "using StartTLS extended operation");
@@ -4210,8 +4210,9 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
                 USER_CACHE_EXPIRY_TIME_ATTRIBUTE_DESCRIPTION);
         setAdvancedProperty(LDAPConstants.USER_DN_CACHE_ENABLED, USER_DN_CACHE_ENABLED_ATTRIBUTE_NAME, "true",
                 USER_DN_CACHE_ENABLED_ATTRIBUTE_DESCRIPTION);
-        setAdvancedProperty(LDAPConstants.STARTTLS_ENABLED, UserStoreConfigConstants.STARTTLS_ENABLED_ATTRIBUTE_NAME,
-                "false", UserStoreConfigConstants.STARTTLS_ENABLED_ATTRIBUTE_NAME_DESCRIPTION);
+        setAdvancedProperty(UserStoreConfigConstants.STARTTLS_ENABLED,
+                UserStoreConfigConstants.STARTTLS_ENABLED_DISPLAY_NAME, "false",
+                UserStoreConfigConstants.STARTTLS_ENABLED_DESCRIPTION);
     }
 
     private static void setAdvancedProperty(String name, String displayName, String value,
