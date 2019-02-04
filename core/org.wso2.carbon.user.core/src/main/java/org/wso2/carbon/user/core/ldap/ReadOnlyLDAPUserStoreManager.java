@@ -225,9 +225,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
         try {
             dirContext = connectionSource.getContext();
             if (this.isReadOnly()) {
-                boolean startTLSEnabled = Boolean.parseBoolean(
-                        realmConfig.getUserStoreProperty(UserStoreConfigConstants.STARTTLS_ENABLED));
-                if (startTLSEnabled && this.connectionSource.getStartTlsConnection() != null) {
+                if (this.connectionSource.isStartTLSEstablishedSuccessfully()) {
                     log.info("LDAP secure connection created successfully in read-only mode " +
                             "using StartTLS extended operation");
                 } else {
@@ -242,7 +240,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             }
             throw new UserStoreException(errorMessage, e);
         } finally {
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(dirContext);
         }
         this.userRealm = realm;
@@ -712,7 +710,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             // close the naming enumeration and free up resources
             JNDIUtil.closeNamingEnumeration(attrs);
             JNDIUtil.closeNamingEnumeration(answer);
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             // close directory context
             JNDIUtil.closeContext(dirContext);
         }
@@ -796,7 +794,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             }
         } finally {
             JNDIUtil.closeNamingEnumeration(answer);
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(dirContext);
         }
         if (debug) {
@@ -1039,7 +1037,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             throw new UserStoreException(errorMessage, e);
         } finally {
             JNDIUtil.closeNamingEnumeration(answer);
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(dirContext);
         }
         return userNames;
@@ -1175,7 +1173,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             }
 
         } finally {
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(cxt);
         }
 
@@ -1259,7 +1257,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             }
 
         } finally {
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(cxt);
         }
 
@@ -1458,7 +1456,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             throw new UserStoreException(errorMessage, e);
         } finally {
             JNDIUtil.closeNamingEnumeration(answer);
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(dirContext);
         }
 
@@ -1934,7 +1932,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             throw new UserStoreException(errorMessage, e);
         } finally {
             JNDIUtil.closeNamingEnumeration(answer);
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(dirContext);
         }
 
@@ -2300,7 +2298,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             log.debug(e.getMessage(), e);
         } finally {
             JNDIUtil.closeNamingEnumeration(answer);
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(dirContext);
         }
         return userDN;
@@ -2411,7 +2409,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             throw new UserStoreException(e.getMessage(), e);
         } finally {
             JNDIUtil.closeNamingEnumeration(answer);
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(dirContext);
         }
 
@@ -2463,7 +2461,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             }
         } finally {
             JNDIUtil.closeNamingEnumeration(answer);
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(dirContext);
         }
         return list;
@@ -2537,7 +2535,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             return names;
         } finally {
             JNDIUtil.closeNamingEnumeration(answer);
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(dirContext);
         }
     }
@@ -2656,7 +2654,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             // close the naming enumeration and free up resources
             JNDIUtil.closeNamingEnumeration(attrs);
             JNDIUtil.closeNamingEnumeration(answer);
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             // close directory context
             JNDIUtil.closeContext(dirContext);
         }
@@ -2718,7 +2716,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
                     e.getMessage()));
             throw new UserStoreException(e.getMessage(), e);
         } finally {
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(dirContext);
             JNDIUtil.closeContext(ldapContext);
         }
@@ -3287,7 +3285,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
                     claimSearch.getSearchFilterQuery(), e.getMessage()));
             throw new UserStoreException(e.getMessage(), e);
         } finally {
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(claimSearchDirContext);
             JNDIUtil.closeNamingEnumeration(tempAnswer);
         }
@@ -3543,7 +3541,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
                 }
             } finally {
                 JNDIUtil.closeNamingEnumeration(answer);
-                JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+                this.connectionSource.closeStartTlsResponse();
                 JNDIUtil.closeContext(dirContext);
             }
         }
@@ -3814,7 +3812,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             }
             throw new UserStoreException(errorMessage, e);
         } finally {
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(dirContext);
         }
         return groupNameAttributeValues;

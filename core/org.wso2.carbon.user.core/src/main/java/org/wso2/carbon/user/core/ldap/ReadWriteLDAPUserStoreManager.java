@@ -160,9 +160,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
         DirContext dirContext = null;
         try {
             dirContext = connectionSource.getContext();
-            boolean startTLSEnabled = Boolean.parseBoolean(
-                    realmConfig.getUserStoreProperty(UserStoreConfigConstants.STARTTLS_ENABLED));
-            if (startTLSEnabled && this.connectionSource.getStartTlsConnection() != null) {
+            if (this.connectionSource.isStartTLSEstablishedSuccessfully()) {
                 log.info("LDAP secure connection created successfully in read-write mode " +
                         "using StartTLS extended operation");
             } else {
@@ -172,7 +170,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             throw new UserStoreException("Cannot create connection to LDAP server. Error message "
                     + e.getMessage());
         } finally {
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(dirContext);
         }
         this.userRealm = realm;
@@ -299,7 +297,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             }
             throw new UserStoreException(errorMessage, e);
         } finally {
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(dirContext);
             // Clearing password byte array
             UserCoreUtil.clearSensitiveBytes(passwordToStore);
@@ -617,7 +615,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             JNDIUtil.closeNamingEnumeration(groupResults);
             JNDIUtil.closeNamingEnumeration(userResults);
 
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(subDirContext);
             JNDIUtil.closeContext(mainDirContext);
         }
@@ -686,7 +684,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             JNDIUtil.closeNamingEnumeration(passwords);
             JNDIUtil.closeNamingEnumeration(namingEnumeration);
 
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(subDirContext);
             JNDIUtil.closeContext(dirContext);
         }
@@ -776,7 +774,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             JNDIUtil.closeNamingEnumeration(passwords);
             JNDIUtil.closeNamingEnumeration(namingEnumeration);
 
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(subDirContext);
             JNDIUtil.closeContext(dirContext);
         }
@@ -960,7 +958,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
         } catch (Exception e) {
             handleException(e, userName);
         } finally {
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(subDirContext);
             JNDIUtil.closeContext(dirContext);
         }
@@ -1057,7 +1055,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
         } catch (Exception e) {
             handleException(e, userName);
         } finally {
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(subDirContext);
             JNDIUtil.closeContext(dirContext);
         }
@@ -1120,7 +1118,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
         } catch (Exception e) {
             handleException(e, userName);
         } finally {
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(subDirContext);
             JNDIUtil.closeContext(dirContext);
         }
@@ -1180,7 +1178,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
         } catch (Exception e) {
             handleException(e, userName);
         } finally {
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(subDirContext);
             JNDIUtil.closeContext(dirContext);
         }
@@ -1302,7 +1300,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                 throw new UserStoreException(errorMsg, e);
             } finally {
                 JNDIUtil.closeNamingEnumeration(results);
-                JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+                this.connectionSource.closeStartTlsResponse();
                 JNDIUtil.closeContext(groupContext);
                 JNDIUtil.closeContext(mainDirContext);
             }
@@ -1483,7 +1481,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             }
             throw new UserStoreException(errorMessage, e);
         } finally {
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(mainDirContext);
         }
     }
@@ -1617,7 +1615,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                 throw new UserStoreException(errorMessage, e);
             } finally {
                 JNDIUtil.closeNamingEnumeration(groupSearchResults);
-                JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+                this.connectionSource.closeStartTlsResponse();
                 JNDIUtil.closeContext(mainDirContext);
             }
         } else {
@@ -1669,7 +1667,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             }
             throw new UserStoreException(errorMessage);
         } finally {
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(groupContext);
             JNDIUtil.closeContext(mainDirContext);
         }
@@ -1811,7 +1809,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             throw new UserStoreException(errorMessage, e);
         } finally {
             JNDIUtil.closeNamingEnumeration(groupSearchResults);
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(groupContext);
             JNDIUtil.closeContext(mainContext);
         }
@@ -1872,7 +1870,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             throw new UserStoreException(errorMessage, e);
         } finally {
             JNDIUtil.closeNamingEnumeration(groupSearchResults);
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(groupContext);
             JNDIUtil.closeContext(mainDirContext);
         }

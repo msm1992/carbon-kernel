@@ -82,7 +82,8 @@ public class LDAPConnectionContext {
     private static final String CORRELATION_LOG_SEPARATOR = "|";
     private static final String CORRELATION_LOG_SYSTEM_PROPERTY = "enableCorrelationLogs";
     private boolean startTLSEnabled;
-    private StartTlsResponse startTlsConnection = null;
+    private StartTlsResponse startTlsResponse = null;
+    private boolean isStartTLSEstablishedSuccessfully = false;
 
     static {
         String initialContextFactoryClassSystemProperty = System.getProperty(Context.INITIAL_CONTEXT_FACTORY);
@@ -571,15 +572,15 @@ public class LDAPConnectionContext {
         Hashtable<String, Object> tempEnv = getEnvironmentForSecuredLdapInitialization(environment);
         LdapContext ldapContext = new InitialLdapContext(tempEnv, connectionControls);
         try {
-            startTlsConnection = (StartTlsResponse) ldapContext.extendedOperation(new StartTlsRequest());
-            startTlsConnection.negotiate();
+            startTlsResponse = (StartTlsResponse) ldapContext.extendedOperation(new StartTlsRequest());
+            startTlsResponse.negotiate();
+            isStartTLSEstablishedSuccessfully = true;
             if (log.isDebugEnabled()) {
                 log.debug("StartTLS connection established successfully with LDAP server");
             }
             performAuthenticationIfProvided(environment, ldapContext);
             return ldapContext;
         } catch (IOException e) {
-            log.error("Error occurred while establishing the StartTLS connection", e);
             throw new UserStoreException("Unable to establish the StartTLS connection", e);
         }
     }
@@ -595,8 +596,12 @@ public class LDAPConnectionContext {
         Hashtable<String, Object> tempEnv = new Hashtable<>();
         // Create a temp env for this particular connection by eliminating user credentials details from original env.
         for (Object key : environment.keySet()) {
-            if (!Context.SECURITY_PRINCIPAL.equals(key) && !Context.SECURITY_CREDENTIALS.equals(key) &&
-                    !Context.SECURITY_AUTHENTICATION.equals(key)) {
+            if (Context.SECURITY_PRINCIPAL.equals(key) || Context.SECURITY_CREDENTIALS.equals(key) ||
+                    Context.SECURITY_AUTHENTICATION.equals(key)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Attribute" + key + " is skip adding to the environment for TLS LDAP initialization");
+                }
+            } else {
                 tempEnv.put((String) key, environment.get(key));
             }
         }
@@ -747,12 +752,31 @@ public class LDAPConnectionContext {
     }
 
     /**
-     * Get StartTLS response object.
+     * Get StartTLS state.
      *
-     * @return startTLSResponse.
+     * @return isStartTLSEstablishedSuccessfully.
      */
-    public StartTlsResponse getStartTlsConnection() {
+    public boolean isStartTLSEstablishedSuccessfully() {
 
-        return this.startTlsConnection;
+        return this.isStartTLSEstablishedSuccessfully;
+    }
+
+    /**
+     * Method to close the used startTLS Response.
+     */
+    public void closeStartTlsResponse() {
+
+        if (this.startTlsResponse != null) {
+            try {
+                this.startTlsResponse.close();
+                isStartTLSEstablishedSuccessfully = false;
+                if (log.isDebugEnabled()) {
+                    log.debug("Closing the StartTLS connection with LDAP server");
+                }
+            } catch (IOException e) {
+                String errorMessage = "Error occurred when closing StartTLS connection.";
+                log.error(errorMessage, e);
+            }
+        }
     }
 }

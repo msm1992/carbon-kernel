@@ -206,7 +206,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
             throw new UserStoreException(errorMessage, e);
         } finally {
             credentialObj.clear();
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(dirContext);
         }
     }
@@ -324,7 +324,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
         } finally {
             credentialObj.clear();
             JNDIUtil.closeNamingEnumeration(searchResults);
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(subDirContext);
             JNDIUtil.closeContext(dirContext);
         }
@@ -397,7 +397,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
             throw new UserStoreException(error, e);
         } finally {
             JNDIUtil.closeNamingEnumeration(searchResults);
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(subDirContext);
             JNDIUtil.closeContext(dirContext);
         }
@@ -605,7 +605,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
         } catch (Exception e) {
             handleException(e, userName);
         } finally {
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(subDirContext);
             JNDIUtil.closeContext(dirContext);
         }
@@ -693,7 +693,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
         } catch (Exception e) {
             handleException(e, userName);
         } finally {
-            JNDIUtil.closeStartTLSConnection(this.connectionSource.getStartTlsConnection());
+            this.connectionSource.closeStartTlsResponse();
             JNDIUtil.closeContext(subDirContext);
             JNDIUtil.closeContext(dirContext);
         }

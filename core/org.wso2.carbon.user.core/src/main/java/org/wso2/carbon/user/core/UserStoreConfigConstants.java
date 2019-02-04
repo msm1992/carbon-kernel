@@ -107,5 +107,5 @@ public class UserStoreConfigConstants {
     public static final String STARTTLS_ENABLED = "StartTLSEnabled";
     public static final String STARTTLS_ENABLED_DISPLAY_NAME = "Enable StartTLS";
     public static final String STARTTLS_ENABLED_DESCRIPTION = "Enable secure connection by using " +
-            "StartTLS extended operation in LDAP ";
+            "StartTLS extended operation in LDAP";
 }
