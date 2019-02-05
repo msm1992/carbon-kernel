@@ -599,7 +599,7 @@ public class LDAPConnectionContext {
             if (Context.SECURITY_PRINCIPAL.equals(key) || Context.SECURITY_CREDENTIALS.equals(key) ||
                     Context.SECURITY_AUTHENTICATION.equals(key)) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Attribute" + key + " is skip adding to the environment for TLS LDAP initialization");
+                    log.debug("Attribute " + key + " is skip adding to the environment for TLS LDAP initialization");
                 }
             } else {
                 tempEnv.put((String) key, environment.get(key));
