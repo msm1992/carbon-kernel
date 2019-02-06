@@ -153,7 +153,6 @@ public class LdapContextWrapper implements LdapContext {
                         "TLS LdapContext environment");
             }
         }
-
     }
 
     @Override
