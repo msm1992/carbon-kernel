@@ -63,14 +63,22 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
     private static final String FORCE_SC_ACCEPTED = "FORCE_SC_ACCEPTED";
     private static final String FORCE_POST_PUT_NOBODY = "FORCE_POST_PUT_NOBODY";
     private static final String DELETE_REQUEST_WITH_PAYLOAD = "DELETE_REQUEST_WITH_PAYLOAD";
-    private static final QName IN_OUT_OPERATION = new QName("anonInOutOp");
-    private static final QName OUT_ONLY_OPERATION = new QName("anonOutonlyOp");
 
     private MultitenantMsgContextDataHolder dataHolder = MultitenantMsgContextDataHolder.getInstance();
 
     public TenantTransportSender(ConfigurationContext superTenantConfigurationContext) {
-
-            setupTenantClientOutService(superTenantConfigurationContext);
+        // preserve the super tenant's configuration context to be later used in creating message context per each
+        // Outgoing requests
+        this.superTenantConfigurationContext = superTenantConfigurationContext;
+        try {
+            this.superTenantSenderClientService = superTenantConfigurationContext.getAxisConfiguration()
+                    .getService(MultitenantConstants.MULTITENANT_CLIENT_OUT_SERVICE);
+        } catch (AxisFault axisFault) {
+            log.error("Can't find the " + MultitenantConstants.MULTITENANT_CLIENT_OUT_SERVICE + " service!",
+                    axisFault);
+        }
+        this.superTenantSenderServiceGroup = superTenantConfigurationContext.getAxisConfiguration()
+                .getServiceGroup(MultitenantConstants.MULTITENANT_CLIENT_OUT_SERVICE);
 
     }
 
@@ -82,8 +90,10 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
                 .setProperty(Constants.OUT_TRANSPORT_INFO, msgContext.getProperty(Constants.OUT_TRANSPORT_INFO));
         String incomingMEP = msgContext.getAxisOperation().getMessageExchangePattern();
         AxisOperation axisOperation = incomingMEP.equals(WSDL2Constants.MEP_URI_OUT_ONLY) ?
-                superTenantSenderClientService.getOperation(OUT_ONLY_OPERATION) :
-                superTenantSenderClientService.getOperation(IN_OUT_OPERATION);
+                superTenantSenderClientService.getOperation(
+                        MultitenantConstants.MULTITENANT_CLIENT_SERVICE_OUT_ONLY_OPERATION) :
+                superTenantSenderClientService.getOperation(
+                        MultitenantConstants.MULTITENANT_CLIENT_SERVICE_IN_OUT_OPERATION);
         if (log.isDebugEnabled()) {
             log.debug("Incoming message MEP " + incomingMEP + "Selected axisOperation MEP " + axisOperation
                     .getMessageExchangePattern());
@@ -291,34 +301,6 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
                     getProperty(HTTPConstants.HTTP_METHOD));
         }
         return InvocationResponse.CONTINUE;
-    }
-
-    /**
-     * This method will setup the Axis2 service and two operations for that service which is used in sending the message
-     * out in tenant mode. Two operations are , In-Out axis operation and Out-Only operation. The operation context for
-     * the individual requests will be set dynamically in the TenantTransportSender.invoke() method depending on the
-     * incoming msgContext message exchange pattern. Same operation will be share only with the similar MEPs.
-     *
-     * @param superTenantConfigurationContext Super tenant's configuration context for creating the tenant out service,
-     *                                        One of the reasons to require super tenant's axis configuration is,
-     *                                        If not, Axis2 transport definitions will be not available
-     *                                        to outgoing message
-     * @throws AxisFault
-     */
-    private void setupTenantClientOutService(ConfigurationContext superTenantConfigurationContext) {
-        // preserve the super tenant's configuration context to be later used in creating message context per each
-        // Outgoing requests
-        this.superTenantConfigurationContext = superTenantConfigurationContext;
-        try {
-            this.superTenantSenderClientService = superTenantConfigurationContext.getAxisConfiguration()
-                .getService(MultitenantConstants.MULTITENANT_CLIENT_OUT_SERVICE);
-        } catch (AxisFault axisFault) {
-            log.error("Can't find the " + MultitenantConstants.MULTITENANT_CLIENT_OUT_SERVICE + " service!",
-                    axisFault);
-        }
-        this.superTenantSenderServiceGroup = superTenantConfigurationContext.getAxisConfiguration()
-                .getServiceGroup(MultitenantConstants.MULTITENANT_CLIENT_OUT_SERVICE);
-
     }
 
     public void cleanup(MessageContext msgContext) throws AxisFault {
