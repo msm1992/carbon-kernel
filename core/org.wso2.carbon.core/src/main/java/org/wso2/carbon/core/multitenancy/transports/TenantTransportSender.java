@@ -41,10 +41,8 @@ import org.apache.axis2.wsdl.WSDLConstants;
 import org.apache.commons.httpclient.HttpMethod;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.core.internal.MultitenantMsgContextDataHolder;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
-import javax.xml.namespace.QName;
 import java.util.Map;
 
 public class TenantTransportSender extends AbstractHandler implements TransportSender {
@@ -64,7 +62,6 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
     private static final String FORCE_POST_PUT_NOBODY = "FORCE_POST_PUT_NOBODY";
     private static final String DELETE_REQUEST_WITH_PAYLOAD = "DELETE_REQUEST_WITH_PAYLOAD";
 
-    private MultitenantMsgContextDataHolder dataHolder = MultitenantMsgContextDataHolder.getInstance();
 
     public TenantTransportSender(ConfigurationContext superTenantConfigurationContext) {
         // preserve the super tenant's configuration context to be later used in creating message context per each
@@ -128,11 +125,11 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
         superTenantOutMessageContext.setProperty(EXCESS_TRANSPORT_HEADERS,
                 msgContext.getProperty(EXCESS_TRANSPORT_HEADERS));
 
-        superTenantOutMessageContext.setProperty(MultitenantConstants.HTTP_SC, msgContext.getProperty(MultitenantConstants.HTTP_SC));
+        superTenantOutMessageContext.setProperty(MultitenantConstants.HTTP_SC,msgContext.getProperty(MultitenantConstants.HTTP_SC));
         superTenantOutMessageContext.setProperty(HTTP_SC_DESC,
                 msgContext.getProperty(HTTP_SC_DESC));
+        superTenantOutMessageContext.setProperty(HTTPConstants.HTTP_HEADERS,msgContext.getProperty(HTTPConstants.HTTP_HEADERS));
 
-        superTenantOutMessageContext.setProperty(HTTPConstants.HTTP_HEADERS, msgContext.getProperty(HTTPConstants.HTTP_HEADERS));
 
         // Copy Message type and Content type from the original message ctx
         // so that the content type will be set properly
@@ -160,13 +157,11 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
                 msgContext.getProperty(MultitenantConstants.DISABLE_CHUNKING));
         superTenantOutMessageContext.setProperty(MultitenantConstants.NO_KEEPALIVE,
                 msgContext.getProperty(MultitenantConstants.NO_KEEPALIVE));
-
         boolean forced = msgContext.isPropertyTrue(FORCE_SC_ACCEPTED);
-        boolean forcedNoBody = msgContext.isPropertyTrue(FORCE_POST_PUT_NOBODY);
         if (forced) {
             superTenantOutMessageContext.setProperty(FORCE_SC_ACCEPTED, true);
         }
-
+        boolean forcedNoBody = msgContext.isPropertyTrue(FORCE_POST_PUT_NOBODY);
         if (forcedNoBody) {
             superTenantOutMessageContext.setProperty(FORCE_POST_PUT_NOBODY, true);
         }
@@ -188,13 +183,14 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
         boolean contentLengthCopy = msgContext.isPropertyTrue(MultitenantConstants.
                 COPY_CONTENT_LENGTH_FROM_INCOMING);
 
-        superTenantOutMessageContext.setProperty(MultitenantConstants.POST_TO_URI,
-        msgContext.getProperty(MultitenantConstants.POST_TO_URI));
+        superTenantOutMessageContext.setProperty(MultitenantConstants.POST_TO_URI, 
+        		 msgContext.getProperty(MultitenantConstants.POST_TO_URI));        
         
         superTenantOutMessageContext.setProperty(MultitenantConstants.FORCE_HTTP_CONTENT_LENGTH,
                 forceContentLength);
         superTenantOutMessageContext.setProperty(MultitenantConstants.COPY_CONTENT_LENGTH_FROM_INCOMING,
                 contentLengthCopy);
+
 
 
         superTenantOutMessageContext.setProperty(Constants.Configuration.MESSAGE_TYPE,
@@ -205,7 +201,7 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
             MessageContext inMessageContext =
                     msgContext.getOperationContext().getMessageContext(WSDLConstants.MESSAGE_LABEL_IN_VALUE);
             if (inMessageContext != null){
-                superTenantOutMessageContext.setProperty(RequestResponseTransport.TRANSPORT_CONTROL,
+                superTenantOutMessageContext.setProperty(RequestResponseTransport.TRANSPORT_CONTROL, 
                         inMessageContext.getProperty(RequestResponseTransport.TRANSPORT_CONTROL));
             }
         }
@@ -215,7 +211,7 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
             superTenantOutMessageContext.setProperty(AddressingConstants.DISABLE_ADDRESSING_FOR_OUT_MESSAGES,
                     msgContext.getProperty(AddressingConstants.DISABLE_ADDRESSING_FOR_OUT_MESSAGES));
         }
-
+        
         if(msgContext.getProperty(MultitenantConstants.PASS_THROUGH_PIPE) != null){
         	superTenantOutMessageContext.setProperty(MultitenantConstants.PASS_THROUGH_PIPE, msgContext.getProperty(MultitenantConstants.PASS_THROUGH_PIPE));
         	superTenantOutMessageContext.setProperty(MultitenantConstants.MESSAGE_BUILDER_INVOKED,msgContext.getProperty(MultitenantConstants.MESSAGE_BUILDER_INVOKED) != null?msgContext.getProperty(MultitenantConstants.MESSAGE_BUILDER_INVOKED):Boolean.FALSE);
@@ -256,13 +252,6 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
             superTenantOutMessageContext.setProperty(NO_ENTITY_BODY, msgContext.getProperty(NO_ENTITY_BODY));
         }
 
-        // set additional multitenant message context properties read from multitenant-msg-context.properties file
-        for (String property : dataHolder.getTenantMsgContextProperties()) {
-            if (msgContext.getProperty(property) != null) {
-                superTenantOutMessageContext.setProperty(property, msgContext.getProperty(property));
-            }
-        }
-
         setDeleteRequestWithPayloadProperty(superTenantOutMessageContext, msgContext);
 
         EndpointReference epr = getDestinationEPR(msgContext);
@@ -270,7 +259,7 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
         if (epr != null && !incomingMEP.equals(WSDL2Constants.MEP_URI_OUT_ONLY)) {
             String messageId = UIDGenerator.generateURNString();
             superTenantOutMessageContext.setMessageID(messageId);
-            superTenantOutMessageContext.setProperty(MultitenantConstants.TENANT_REQUEST_MSG_CTX,
+            superTenantOutMessageContext.setProperty(MultitenantConstants.TENANT_REQUEST_MSG_CTX, 
                     msgContext);
 
             superTenantOutMessageContext.setServerSide(true);
@@ -280,7 +269,7 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
             superTenantInMessageContext.setProperty(
                     "synapse.RelatesToForPox", messageId);
             superTenantInMessageContext.setServerSide(true);
-
+            
             superTenantInMessageContext.setMessageID(messageId);
             superTenantInMessageContext.setServiceContext(serviceContext);
             axisOperation.registerOperationContext(superTenantInMessageContext, operationContext);
