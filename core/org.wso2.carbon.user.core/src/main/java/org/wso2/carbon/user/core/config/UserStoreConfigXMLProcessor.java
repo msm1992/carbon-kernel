@@ -352,18 +352,18 @@ public class UserStoreConfigXMLProcessor {
         }
 
         String password = serverConfigurationService.getFirstProperty(
-                "Security.KeyStore.Password");
+                "Security.InternalKeyStore.Password");
         String keyPass = serverConfigurationService.getFirstProperty(
-                "Security.KeyStore.KeyPassword");
+                "Security.InternalKeyStore.KeyPassword");
         String keyAlias = serverConfigurationService.getFirstProperty(
-                "Security.KeyStore.KeyAlias");
+                "Security.InternalKeyStore.KeyAlias");
         InputStream in = null;
         try {
             KeyStore store = KeyStore.getInstance(
                     serverConfigurationService.getFirstProperty(
-                            "Security.KeyStore.Type"));
+                            "Security.InternalKeyStore.Type"));
             String file = new File(serverConfigurationService.getFirstProperty(
-                    "Security.KeyStore.Location")).getAbsolutePath();
+                    "Security.InternalKeyStore.Location")).getAbsolutePath();
             in = new FileInputStream(file);
             store.load(in, password.toCharArray());
             return (PrivateKey) store.getKey(keyAlias, keyPass.toCharArray());
