@@ -3365,9 +3365,14 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                 if (index2 > 0) {
                     domain = newRole.substring(0, index2);
                 }
-                if (APPLICATION_DOMAIN.equalsIgnoreCase(domain) || WORKFLOW_DOMAIN.equalsIgnoreCase(domain)) {
+                if (UserCoreConstants.INTERNAL_DOMAIN.equalsIgnoreCase(domain)) {
+                    // If this is an internal role.
+                    internalRoleNew.add(UserCoreUtil.removeDomainFromName(newRole));
+                } else if (APPLICATION_DOMAIN.equalsIgnoreCase(domain) || WORKFLOW_DOMAIN.equalsIgnoreCase(domain)) {
+                    // If this is an application role or workflow role.
                     internalRoleNew.add(newRole);
-                } else if (UserCoreConstants.INTERNAL_DOMAIN.equalsIgnoreCase(domain) || this.isReadOnly()) {
+                } else if (this.isReadOnly()) {
+                    // If this is a readonly user store, we add even normal roles as internal roles.
                     internalRoleNew.add(UserCoreUtil.removeDomainFromName(newRole));
                 } else {
                     roleNew.add(UserCoreUtil.removeDomainFromName(newRole));
@@ -5680,7 +5685,10 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
             return (String[]) object;
         }
 
-        String[] roleList;
+        String[] roleList = getRoleListOfUserFromCache(this.tenantId, userName);
+        if (roleList != null && roleList.length > 0) {
+            return roleList;
+        }
 
         String[] internalRoles = doGetInternalRoleListOfUser(userName, filter);
 

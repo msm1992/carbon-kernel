@@ -21,6 +21,7 @@ import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.base.api.ServerConfigurationService;
+import org.wso2.carbon.crypto.api.ExternalCryptoProvider;
 import org.wso2.carbon.ndatasource.common.DataSourceException;
 import org.wso2.carbon.ndatasource.core.DataSourceAxis2ConfigurationContextObserver;
 import org.wso2.carbon.ndatasource.core.DataSourceManager;
@@ -50,7 +51,9 @@ import java.lang.reflect.InvocationTargetException;
 * @scr.reference name="server.configuration.service" interface="org.wso2.carbon.base.api.ServerConfigurationService"
 * cardinality="0..1" policy="dynamic"  bind="setServerConfigurationService" unbind="unsetServerConfigurationService"
 * @scr.reference name="config.context.service" interface="org.wso2.carbon.utils.ConfigurationContextService"
-* cardinality="0..1" policy="dynamic"  bind="setConfigurationContextService" unbind="unsetConfigurationContextService" 
+* cardinality="0..1" policy="dynamic"  bind="setConfigurationContextService" unbind="unsetConfigurationContextService"
+* @scr.reference name="external.crypto.service" interface="org.wso2.carbon.crypto.api.ExternalCryptoProvider"
+* cardinality="0..1" policy="dynamic"  bind="setExternalCryptoProvider" unbind="unsetExternalCryptoProvider"
 */
 public class DataSourceServiceComponent {
 
@@ -59,7 +62,9 @@ public class DataSourceServiceComponent {
     private static final String DATA_SOURCE_REPO_CLASS_TAG = "CarbonDataSourceRepositoryClass";
 	
 	private static RegistryService registryService;
-	
+
+	private static ExternalCryptoProvider externalCryptoProvider;
+
 	private static RealmService realmService;
 		
 	private static SecretCallbackHandlerService secretCallbackHandlerService;
@@ -140,6 +145,22 @@ public class DataSourceServiceComponent {
     	DataSourceServiceComponent.realmService = realmService;
     	this.checkInitTenantUserDataSources();
     }
+
+	protected void setExternalCryptoProvider(ExternalCryptoProvider externalCryptoProvider) {
+		if (log.isDebugEnabled()) {
+			log.debug("ExternalCryptoProvider acquired");
+		}
+		this.externalCryptoProvider = externalCryptoProvider;
+		this.checkInitTenantUserDataSources();
+	}
+
+	protected void unsetExternalCryptoProvider(ExternalCryptoProvider externalCryptoProvider) {
+		this.externalCryptoProvider = null;
+	}
+
+	public static ExternalCryptoProvider getExternalCryptoProvider() {
+		return DataSourceServiceComponent.externalCryptoProvider;
+	}
     
     protected void unsetRealmService(RealmService realmService) {
     	DataSourceServiceComponent.realmService = null;
@@ -202,7 +223,8 @@ public class DataSourceServiceComponent {
     	if (DataSourceServiceComponent.getRealmService() != null && 
     			DataSourceServiceComponent.getRegistryService() != null &&
     			DataSourceServiceComponent.getSecretCallbackHandlerService() != null && 
-    			DataSourceServiceComponent.getServerConfigurationService() != null) {
+    			DataSourceServiceComponent.getServerConfigurationService() != null &&
+				DataSourceServiceComponent.getExternalCryptoProvider() != null) {
     		this.initSuperTenantUserDataSources();
     	}
     }

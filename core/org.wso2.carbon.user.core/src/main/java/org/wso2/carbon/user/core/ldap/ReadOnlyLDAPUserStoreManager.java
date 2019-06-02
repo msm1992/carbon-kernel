@@ -55,6 +55,20 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.Secret;
 import org.wso2.carbon.utils.UnsupportedSecretTypeException;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import javax.cache.Cache;
 import javax.cache.CacheBuilder;
 import javax.cache.CacheConfiguration;
@@ -79,20 +93,6 @@ import javax.naming.ldap.PagedResultsControl;
 import javax.naming.ldap.PagedResultsResponseControl;
 import javax.naming.ldap.Rdn;
 import javax.sql.DataSource;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 import static org.wso2.carbon.user.core.ldap.ActiveDirectoryUserStoreConstants.TRANSFORM_OBJECTGUID_TO_UUID;
 
@@ -405,7 +405,25 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             return false;
         }
 
-        userName = userName.trim();
+        String leadingOrTrailingSpaceAllowedInUserName = realmConfig.getUserStoreProperty(UserCoreConstants
+                .RealmConfig.LEADING_OR_TRAILING_SPACE_ALLOWED_IN_USERNAME);
+        if (StringUtils.isNotEmpty(leadingOrTrailingSpaceAllowedInUserName)) {
+            boolean isSpaceAllowedInUserName = Boolean.parseBoolean(leadingOrTrailingSpaceAllowedInUserName);
+            if (log.isDebugEnabled()) {
+                log.debug("'LeadingOrTrailingSpaceAllowedInUserName' property is set to : " +
+                        isSpaceAllowedInUserName);
+            }
+            // if space is not allowed in username and user input contains a space, we fail user authentication.
+            if (!isSpaceAllowedInUserName && !userName.equals(userName.trim())) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Leading or trailing spaces are not allowed in username. Hence failing authentication " +
+                            "for the user : " + userName);
+                }
+                return false;
+            }
+        } else {
+            userName = userName.trim();
+        }
 
         Secret credentialObj;
         try {
@@ -1064,10 +1082,11 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
                                     searchControls,
                                     displayNameAttribute, false);
                     // we expect only one display name
-                    String name =
-                            UserCoreUtil.getCombinedName(this.realmConfig.getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME),
-                                    userName, displayNames.get(0));
-                    combinedNames.add(name);
+                    if (displayNames != null && !displayNames.isEmpty()) {
+                        String name = UserCoreUtil.getCombinedName(this.realmConfig.getUserStoreProperty(
+                                UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME), userName, displayNames.get(0));
+                        combinedNames.add(name);
+                    }
                 }
                 return combinedNames.toArray(new String[combinedNames.size()]);
             } else {
@@ -4186,6 +4205,9 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
                 USER_CACHE_EXPIRY_TIME_ATTRIBUTE_DESCRIPTION);
         setAdvancedProperty(LDAPConstants.USER_DN_CACHE_ENABLED, USER_DN_CACHE_ENABLED_ATTRIBUTE_NAME, "true",
                 USER_DN_CACHE_ENABLED_ATTRIBUTE_DESCRIPTION);
+        setAdvancedProperty(UserStoreConfigConstants.STARTTLS_ENABLED,
+                UserStoreConfigConstants.STARTTLS_ENABLED_DISPLAY_NAME, "false",
+                UserStoreConfigConstants.STARTTLS_ENABLED_DESCRIPTION);
     }
 
     private static void setAdvancedProperty(String name, String displayName, String value,

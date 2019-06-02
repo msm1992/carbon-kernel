@@ -30,7 +30,7 @@ import org.apache.axis2.description.AxisOperation;
 import org.apache.axis2.description.AxisService;
 import org.apache.axis2.description.AxisServiceGroup;
 import org.apache.axis2.description.TransportOutDescription;
-import org.apache.axis2.engine.AxisConfiguration;
+import org.apache.axis2.description.WSDL2Constants;
 import org.apache.axis2.engine.AxisEngine;
 import org.apache.axis2.handlers.AbstractHandler;
 import org.apache.axis2.transport.RequestResponseTransport;
@@ -39,63 +39,78 @@ import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.axis2.util.JavaUtils;
 import org.apache.axis2.wsdl.WSDLConstants;
 import org.apache.commons.httpclient.HttpMethod;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.util.Map;
 
-public class TenantTransportSender extends AbstractHandler implements TransportSender{
+public class TenantTransportSender extends AbstractHandler implements TransportSender {
 
     private ConfigurationContext superTenantConfigurationContext;
+    private AxisService superTenantSenderClientService;
+    private AxisServiceGroup superTenantSenderServiceGroup;
+    private static final Log log = LogFactory.getLog(TenantTransportSender.class);
+
     private static final String SERVICE_PREFIX = "SERVICE_PREFIX";
     private static final String REQUEST_HOST_HEADER = "REQUEST_HOST_HEADER";
     private static final String HTTP_ETAG = "HTTP_ETAG";
     private static final String NO_ENTITY_BODY = "NO_ENTITY_BODY";
-    private static final String HTTP_SC_DESC ="HTTP_SC_DESC";
+    private static final String HTTP_SC_DESC = "HTTP_SC_DESC";
     private static final String EXCESS_TRANSPORT_HEADERS = "EXCESS_TRANSPORT_HEADERS";
     private static final String FORCE_SC_ACCEPTED = "FORCE_SC_ACCEPTED";
     private static final String FORCE_POST_PUT_NOBODY = "FORCE_POST_PUT_NOBODY";
     private static final String DELETE_REQUEST_WITH_PAYLOAD = "DELETE_REQUEST_WITH_PAYLOAD";
 
+
     public TenantTransportSender(ConfigurationContext superTenantConfigurationContext) {
+        // preserve the super tenant's configuration context to be later used in creating message context per each
+        // Outgoing requests
         this.superTenantConfigurationContext = superTenantConfigurationContext;
+        try {
+            this.superTenantSenderClientService = superTenantConfigurationContext.getAxisConfiguration()
+                    .getService(MultitenantConstants.MULTITENANT_CLIENT_OUT_SERVICE);
+        } catch (AxisFault axisFault) {
+            log.error("Can't find the " + MultitenantConstants.MULTITENANT_CLIENT_OUT_SERVICE + " service!",
+                    axisFault);
+        }
+        this.superTenantSenderServiceGroup = superTenantConfigurationContext.getAxisConfiguration()
+                .getServiceGroup(MultitenantConstants.MULTITENANT_CLIENT_OUT_SERVICE);
+
     }
 
     public InvocationResponse invoke(MessageContext msgContext) throws AxisFault {
-        MessageContext superTenantOutMessageContext =
-                this.superTenantConfigurationContext.createMessageContext();
-        superTenantOutMessageContext.setProperty(MessageContext.TRANSPORT_OUT,
-                msgContext.getProperty(MessageContext.TRANSPORT_OUT));
-        superTenantOutMessageContext.setProperty(Constants.OUT_TRANSPORT_INFO,
-                msgContext.getProperty(Constants.OUT_TRANSPORT_INFO));
+        MessageContext superTenantOutMessageContext = superTenantConfigurationContext.createMessageContext();
+        superTenantOutMessageContext
+                .setProperty(MessageContext.TRANSPORT_OUT, msgContext.getProperty(MessageContext.TRANSPORT_OUT));
+        superTenantOutMessageContext
+                .setProperty(Constants.OUT_TRANSPORT_INFO, msgContext.getProperty(Constants.OUT_TRANSPORT_INFO));
+        String incomingMEP = msgContext.getAxisOperation().getMessageExchangePattern();
+        AxisOperation axisOperation = incomingMEP.equals(WSDL2Constants.MEP_URI_OUT_ONLY) ?
+                superTenantSenderClientService.getOperation(
+                        MultitenantConstants.MULTITENANT_CLIENT_SERVICE_OUT_ONLY_OPERATION) :
+                superTenantSenderClientService.getOperation(
+                        MultitenantConstants.MULTITENANT_CLIENT_SERVICE_IN_OUT_OPERATION);
+        if (log.isDebugEnabled()) {
+            log.debug("Incoming message MEP " + incomingMEP + "Selected axisOperation MEP " + axisOperation
+                    .getMessageExchangePattern());
+        }
+        superTenantOutMessageContext.setAxisService(superTenantSenderClientService);
 
-        AxisConfiguration supperTenantAxisConfiguration =
-                this.superTenantConfigurationContext.getAxisConfiguration();
-        AxisService axisService =
-                supperTenantAxisConfiguration.getService(
-                        MultitenantConstants.MULTITENANT_DISPATCHER_SERVICE);
-        superTenantOutMessageContext.setAxisService(axisService);
-
-        AxisServiceGroup axisServiceGroup =
-                supperTenantAxisConfiguration.getServiceGroup(
-                        MultitenantConstants.MULTITENANT_DISPATCHER_SERVICE);
-        ServiceGroupContext serviceGroupContext =
-                this.superTenantConfigurationContext.createServiceGroupContext(axisServiceGroup);
-        ServiceContext serviceContext = serviceGroupContext.getServiceContext(axisService);
+        ServiceGroupContext serviceGroupContext = superTenantConfigurationContext
+                .createServiceGroupContext(superTenantSenderServiceGroup);
+        ServiceContext serviceContext = serviceGroupContext.getServiceContext(superTenantSenderClientService);
 
         superTenantOutMessageContext.setServiceContext(serviceContext);
 
-        AxisOperation axisOperation = axisService.getOperation(
-                MultitenantConstants.MULTITENANT_DISPATCHER_OPERATION);
         OperationContext operationContext = serviceContext.createOperationContext(axisOperation);
         operationContext.addMessageContext(superTenantOutMessageContext);
 
-        operationContext.getAxisOperation().setMessageExchangePattern(msgContext.getAxisOperation().
-                getMessageExchangePattern());
         superTenantOutMessageContext.setOperationContext(operationContext);
 
         String transportOutName = msgContext.getTransportOut().getName();
         superTenantOutMessageContext.setTransportOut(
-                supperTenantAxisConfiguration.getTransportOut(transportOutName));
+                superTenantConfigurationContext.getAxisConfiguration().getTransportOut(transportOutName));
 
         superTenantOutMessageContext.setEnvelope(msgContext.getEnvelope());
         superTenantOutMessageContext.setProperty(MultitenantConstants.SYNAPSE_JSON_INPUT_STREAM,
@@ -241,7 +256,7 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
 
         EndpointReference epr = getDestinationEPR(msgContext);
         // this is a request message so we need to set the response message context
-        if (epr != null) {
+        if (epr != null && !incomingMEP.equals(WSDL2Constants.MEP_URI_OUT_ONLY)) {
             String messageId = UIDGenerator.generateURNString();
             superTenantOutMessageContext.setMessageID(messageId);
             superTenantOutMessageContext.setProperty(MultitenantConstants.TENANT_REQUEST_MSG_CTX, 
