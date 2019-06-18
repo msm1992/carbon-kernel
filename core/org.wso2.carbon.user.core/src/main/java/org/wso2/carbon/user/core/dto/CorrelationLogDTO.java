@@ -33,62 +33,50 @@ public class CorrelationLogDTO {
     private String args;
 
     public long getStartTime() {
-
         return startTime;
     }
 
     public void setStartTime(long startTime) {
-
         this.startTime = startTime;
     }
 
     public long getDelta() {
-
         return delta;
     }
 
     public void setDelta(long delta) {
-
         this.delta = delta;
     }
 
     public Hashtable<?, ?> getEnvironment() {
-
         return environment;
     }
 
     public void setEnvironment(Hashtable<?, ?> environment) {
-
         this.environment = environment;
     }
 
     public String getMethodName() {
-
         return methodName;
     }
 
     public void setMethodName(String methodName) {
-
         this.methodName = methodName;
     }
 
     public int getArgsLength() {
-
         return argsLength;
     }
 
     public void setArgsLength(int argsLength) {
-
         this.argsLength = argsLength;
     }
 
     public String getArgs() {
-
         return args;
     }
 
     public void setArgs(String args) {
-
         this.args = args;
     }
 }
