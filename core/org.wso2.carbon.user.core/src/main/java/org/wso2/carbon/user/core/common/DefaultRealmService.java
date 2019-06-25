@@ -182,6 +182,10 @@ public class DefaultRealmService implements RealmService {
                 }
                 String lockedString = tenant.getDomain() + "@DefaultRealmService_getTenantUserRealmInternal";
                 synchronized (lockedString.intern()) {
+                    userRealm = getCachedUserRealm(tenantId);
+                    if (userRealm != null) {
+                        return userRealm;
+                    }
                     userRealm = initializeRealm(tenantRealmConfig, tenantId);
                     realmCache.addToCache(tenantId, PRIMARY_TENANT_REALM, userRealm);
                 }
