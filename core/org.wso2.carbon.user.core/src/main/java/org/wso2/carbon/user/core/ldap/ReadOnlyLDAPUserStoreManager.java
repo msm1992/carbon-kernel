@@ -2169,6 +2169,10 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
         return getLDAPRoleListOfUser(userName, filter, searchBase, false);
     }
 
+    protected Boolean isExternalRoleExistUser(String userName, String role) throws UserStoreException {
+
+        return doCheckIsUserInRole(userName, role);
+    }
 
     @Override
     protected String[] doGetSharedRoleListOfUser(String userName,

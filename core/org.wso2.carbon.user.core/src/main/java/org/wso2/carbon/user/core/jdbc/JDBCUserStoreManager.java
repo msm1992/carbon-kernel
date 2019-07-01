@@ -450,17 +450,7 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
 
     @Override
     public boolean doCheckIsUserInRole(String userName, String roleName) throws UserStoreException {
-        // TODO
-        String[] roles = doGetExternalRoleListOfUser(userName, "*");
-        if (roles != null) {
-            for (String role : roles) {
-                if (role.equalsIgnoreCase(roleName)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return isExternalRoleExistUser(userName, roleName);
     }
 
     @Override
@@ -2947,6 +2937,43 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
 
         Collections.addAll(roles, names);
         return roles.toArray(new String[roles.size()]);
+    }
+
+    public Boolean isExternalRoleExistUser(String userName, String role) throws UserStoreException {
+
+        String sqlStmt;
+        if (isCaseSensitiveUsername()) {
+            sqlStmt = realmConfig.getUserStoreProperty(JDBCRealmConstants.GET_IS_USER_ROLE_EXIST);
+        } else {
+            sqlStmt = realmConfig
+                    .getUserStoreProperty(JDBCCaseInsensitiveConstants.GET_IS_USER_ROLE_EXIST_CASE_INSENSITIVE);
+        }
+        List<String> roles = new ArrayList<String>();
+        String[] names;
+        if (sqlStmt == null) {
+            throw new UserStoreException("The sql statement for retrieving user roles is null");
+        }
+        if (sqlStmt.contains(UserCoreConstants.UM_TENANT_COLUMN)) {
+            names = getStringValuesFromDatabase(sqlStmt, userName, tenantId, tenantId, tenantId, role);
+        } else {
+            names = getStringValuesFromDatabase(sqlStmt, userName, role);
+        }
+
+        if (log.isDebugEnabled()) {
+            if (names != null) {
+                for (String name : names) {
+                    log.debug("Found role: " + name);
+                }
+            } else {
+                log.debug("No external role found for the user: " + userName);
+            }
+        }
+
+        if (names == null || names.length == 0) {
+            return false;
+        } else {
+            return true;
+        }
     }
 
     @Override

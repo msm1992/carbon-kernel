@@ -465,6 +465,63 @@ public class HybridRoleManager {
     }
 
     /**
+     * Check whether the internal role is available or not for the specific user.
+     *
+     * @param userName name of the user.
+     * @param role     the role we need to check.
+     * @return true or false.
+     * @throws UserStoreException
+     */
+    public boolean isHybridRoleListOfUser(String userName, String role) throws UserStoreException {
+
+        String getRoleListOfUserSQLConfig = realmConfig
+                .getRealmProperty(HybridJDBCConstants.GET_IS_ROLE_EXIST_LIST_OF_USER);
+        String sqlStmt;
+        if (isCaseSensitiveUsername()) {
+            sqlStmt = HybridJDBCConstants.GET_ROLE_OF_USER_SQL;
+        } else {
+            sqlStmt = JDBCCaseInsensitiveConstants.GET_IS_USER_ROLE_SQL_CASE_INSENSITIVE;
+        }
+
+        if (getRoleListOfUserSQLConfig != null && !getRoleListOfUserSQLConfig.equals("")) {
+            sqlStmt = getRoleListOfUserSQLConfig;
+        }
+        Connection dbConnection = null;
+        try {
+            userName = UserCoreUtil.addDomainToName(userName, getMyDomainName());
+            String domain = UserCoreUtil.extractDomainFromName(userName);
+            dbConnection = DatabaseUtil.getDBConnection(dataSource);
+
+            if (domain != null) {
+                domain = domain.toUpperCase();
+            }
+            if (role.toLowerCase().contains(UserCoreConstants.INTERNAL_DOMAIN.toLowerCase())) {
+                int index;
+                if ((index = role.indexOf(CarbonConstants.DOMAIN_SEPARATOR)) >= 0) {
+                    role = role.substring(index + 1);
+                }
+            }
+            String[] roles = DatabaseUtil
+                    .getStringValuesFromDatabase(dbConnection, sqlStmt, UserCoreUtil.removeDomainFromName(userName),
+                            tenantId, tenantId, tenantId, domain, role);
+
+            if (roles == null || roles.length == 0) {
+                return false;
+            } else {
+                return true;
+            }
+        } catch (SQLException e) {
+            String errorMessage = "Error occurred while getting hybrid role list of user : " + userName;
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
+            throw new UserStoreException(errorMessage, e);
+        } finally {
+            DatabaseUtil.closeAllConnections(dbConnection);
+        }
+    }
+
+    /**
      * Get hybrid role list of users
      *
      * @param userNames user name list
