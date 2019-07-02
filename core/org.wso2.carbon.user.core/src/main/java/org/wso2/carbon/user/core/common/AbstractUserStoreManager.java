@@ -373,7 +373,9 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                 }
             }
         }
-        log.debug("Retrieving internal roles for user name :  " + userName + " and search filter " + filter);
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving internal roles for user name :  " + userName + " and search filter " + filter);
+        }
         return hybridRoleManager.getHybridRoleListOfUser(userName, filter);
     }
 
@@ -401,7 +403,9 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                 }
             }
         }
-        log.debug("Retrieving internal roles for user name :  " + userName + " and search filter " + roleName);
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving internal roles for user name :  " + userName + " and search filter " + roleName);
+        }
         return hybridRoleManager.isHybridRoleListOfUser(userName, roleName);
     }
 
