@@ -378,20 +378,21 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
     }
 
     /**
-     * check the internal roles of the user with internal domain name
+     * Check the internal roles of the user with internal domain name.
      *
      * @param userName Name of the user - who we need to find roles.
      * @param roleName Name of the role.
-     * @return true or false
+     * @return true or false.
      * @throws UserStoreException
      */
     protected boolean isUserRoleExistWithinInternalRoles(String userName, String roleName) throws
             UserStoreException {
+
         if (Boolean.parseBoolean(realmConfig.getUserStoreProperty(MULIPLE_ATTRIBUTE_ENABLE))) {
             String userNameAttribute = realmConfig.getUserStoreProperty(LDAPConstants.USER_NAME_ATTRIBUTE);
             if (userNameAttribute != null && userNameAttribute.trim().length() > 0) {
-                Map<String, String> map = getUserPropertyValues(userName, new String[]{userNameAttribute}, null);
-                String tempUserName = map.get(userNameAttribute);
+                Map<String, String> getUserPropertyValue = getUserPropertyValues(userName, new String[]{userNameAttribute}, null);
+                String tempUserName = getUserPropertyValue.get(userNameAttribute);
                 if (tempUserName != null) {
                     userName = tempUserName;
                     if (log.isDebugEnabled()) {
@@ -3996,7 +3997,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                 || APPLICATION_DOMAIN.equalsIgnoreCase(UserCoreUtil.extractDomainFromName(roleName)) ||
                 WORKFLOW_DOMAIN.equalsIgnoreCase(UserCoreUtil.extractDomainFromName(roleName))) {
 
-            if(isUserRoleExistWithinInternalRoles(userName, roleName)) {
+            if (isUserRoleExistWithinInternalRoles(userName, roleName)) {
                 addToIsUserHasRole(modifiedUserName, roleName, roles);
                 return true;
             }

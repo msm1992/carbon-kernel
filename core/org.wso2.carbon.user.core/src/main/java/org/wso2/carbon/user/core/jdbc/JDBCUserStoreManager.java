@@ -450,7 +450,7 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
 
     @Override
     public boolean doCheckIsUserInRole(String userName, String roleName) throws UserStoreException {
-        return isExternalRoleExistUser(userName, roleName);
+        return isUserBelongsToExternalRole(userName, roleName);
     }
 
     @Override
@@ -2939,7 +2939,7 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
         return roles.toArray(new String[roles.size()]);
     }
 
-    public Boolean isExternalRoleExistUser(String userName, String role) throws UserStoreException {
+    private Boolean isUserBelongsToExternalRole(String userName, String role) throws UserStoreException {
 
         String sqlStmt;
         if (isCaseSensitiveUsername()) {
