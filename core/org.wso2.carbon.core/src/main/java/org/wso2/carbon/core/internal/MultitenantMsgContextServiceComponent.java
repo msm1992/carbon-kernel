@@ -21,6 +21,8 @@ package org.wso2.carbon.core.internal;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.service.component.ComponentContext;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Deactivate;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.File;
@@ -46,12 +48,14 @@ public class MultitenantMsgContextServiceComponent {
 
     private static String MULTITENANT_MSG_CONTEXT_PROPERTIES_FILE = "multitenant-msg-context.properties";
 
-    protected void activate(ComponentContext context) {
+    @Activate
+    protected void activate() {
         //load the additional multitenant context property name list from property file if given and add to data holder
         loadTenantMessageContextProperties();
     }
 
-    protected void deactivate(ComponentContext context) {
+    @Deactivate
+    protected void deactivate() {
     }
 
     /**
@@ -61,7 +65,8 @@ public class MultitenantMsgContextServiceComponent {
     private void loadTenantMessageContextProperties() {
         Properties properties = new Properties();
         List<String> tenantMsgContextProperties = dataHolder.getTenantMsgContextProperties();
-        String filePath = CarbonUtils.getCarbonConfigDirPath() + File.separator + MULTITENANT_MSG_CONTEXT_PROPERTIES_FILE;
+        String filePath = CarbonUtils.getCarbonConfigDirPath() + File.separator
+                + MULTITENANT_MSG_CONTEXT_PROPERTIES_FILE;
         File file = new File(filePath);
         if (file.exists()) {
             try (InputStream in = new FileInputStream(file)) {
@@ -70,8 +75,8 @@ public class MultitenantMsgContextServiceComponent {
                 for (Object key : properties.keySet()) {
                     tenantMsgContextProperties.add((String) key);
                     if (log.isDebugEnabled()) {
-                        log.debug((String) key +
-                                " is added to MultitenantMsgContextDataHolder.tenantMsgContextProperties list");
+                        log.debug(key
+                                + " is added to MultitenantMsgContextDataHolder.tenantMsgContextProperties list");
                     }
                 }
             } catch (IOException e) {

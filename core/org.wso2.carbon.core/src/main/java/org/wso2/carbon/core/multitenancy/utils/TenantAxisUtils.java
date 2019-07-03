@@ -39,6 +39,7 @@ package org.wso2.carbon.core.multitenancy.utils;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.context.ConfigurationContext;
 import org.apache.axis2.context.ConfigurationContextFactory;
+import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.description.AxisService;
 import org.apache.axis2.description.TransportOutDescription;
 import org.apache.axis2.engine.AxisConfiguration;
@@ -49,6 +50,7 @@ import org.osgi.framework.BundleContext;
 import org.osgi.util.tracker.ServiceTracker;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.internal.CarbonCoreDataHolder;
+import org.wso2.carbon.core.internal.MultitenantMsgContextDataHolder;
 import org.wso2.carbon.core.multitenancy.TenantAxisConfigurator;
 import org.wso2.carbon.core.multitenancy.transports.DummyTransportListener;
 import org.wso2.carbon.core.multitenancy.transports.TenantTransportInDescription;
@@ -568,6 +570,26 @@ public final class TenantAxisUtils {
                 }
             }
             tracker.close();
+        }
+    }
+
+    /**
+     * Copy the additional tenant message context properties (given in multitenant-msg-context.properties file)
+     * from super tenant message context to tenant message context
+     *
+     * @param superTenantMsgContext super tenant message context
+     * @param tenantMsgContext      tenant message context
+     */
+    public static void setTenantMsgContextProperties(MessageContext superTenantMsgContext,
+                                                     MessageContext tenantMsgContext) {
+        List<String> tenantMsgContextProperties = MultitenantMsgContextDataHolder.getInstance()
+                .getTenantMsgContextProperties();
+        if (tenantMsgContext != null && superTenantMsgContext != null) {
+            for (String property : tenantMsgContextProperties) {
+                if (superTenantMsgContext.getProperty(property) != null) {
+                    tenantMsgContext.setProperty(property, superTenantMsgContext.getProperty(property));
+                }
+            }
         }
     }
 }
