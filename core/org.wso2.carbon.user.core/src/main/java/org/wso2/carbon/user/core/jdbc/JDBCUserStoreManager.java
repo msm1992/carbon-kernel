@@ -2930,6 +2930,9 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
                 names = getStringValuesFromDatabase(sqlStmt, userName);
             }
         } else {
+            filter = filter.trim();
+            filter = filter.replace("*", "%");
+            filter = filter.replace("?", "_");
             sqlStmt = getExternalRoleListSqlStatement(
                     realmConfig.getUserStoreProperty(JDBCRealmConstants.GET_IS_USER_ROLE_EXIST), realmConfig
                             .getUserStoreProperty(

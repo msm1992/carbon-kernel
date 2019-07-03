@@ -421,6 +421,9 @@ public class HybridRoleManager {
                         .getStringValuesFromDatabase(dbConnection, sqlStmt, UserCoreUtil.removeDomainFromName(userName),
                                 tenantId, tenantId, tenantId, domain);
             } else {
+                filter = filter.trim();
+                filter = filter.replace("*", "%");
+                filter = filter.replace("?", "_");
                 sqlStmt = getHybridRoleListSqlStatement(
                         realmConfig.getRealmProperty(HybridJDBCConstants.GET_IS_ROLE_EXIST_LIST_OF_USER),
                         HybridJDBCConstants.GET_ROLE_OF_USER_SQL,
