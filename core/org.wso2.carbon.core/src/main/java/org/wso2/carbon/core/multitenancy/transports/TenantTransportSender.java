@@ -41,6 +41,7 @@ import org.apache.axis2.wsdl.WSDLConstants;
 import org.apache.commons.httpclient.HttpMethod;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.core.internal.MultitenantMsgContextDataHolder;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.util.Map;
@@ -62,6 +63,7 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
     private static final String FORCE_POST_PUT_NOBODY = "FORCE_POST_PUT_NOBODY";
     private static final String DELETE_REQUEST_WITH_PAYLOAD = "DELETE_REQUEST_WITH_PAYLOAD";
 
+    private MultitenantMsgContextDataHolder dataHolder = MultitenantMsgContextDataHolder.getInstance();
 
     public TenantTransportSender(ConfigurationContext superTenantConfigurationContext) {
         // preserve the super tenant's configuration context to be later used in creating message context per each
@@ -250,6 +252,13 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
 
         if (msgContext.getProperty(NO_ENTITY_BODY) != null) {
             superTenantOutMessageContext.setProperty(NO_ENTITY_BODY, msgContext.getProperty(NO_ENTITY_BODY));
+        }
+
+        // set additional multitenant message context properties read from multitenant-msg-context.properties file
+        for (String property : dataHolder.getTenantMsgContextProperties()) {
+            if (msgContext.getProperty(property) != null) {
+                superTenantOutMessageContext.setProperty(property, msgContext.getProperty(property));
+            }
         }
 
         setDeleteRequestWithPayloadProperty(superTenantOutMessageContext, msgContext);
