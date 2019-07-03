@@ -20,8 +20,7 @@ package org.wso2.carbon.core.internal;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.osgi.service.component.annotations.Activate;
-import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.ComponentContext;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.File;
@@ -47,14 +46,18 @@ public class MultitenantMsgContextServiceComponent {
 
     private static String MULTITENANT_MSG_CONTEXT_PROPERTIES_FILE = "multitenant-msg-context.properties";
 
-    @Activate
-    protected void activate() {
+    protected void activate(ComponentContext context) {
+        if (log.isDebugEnabled()) {
+            log.debug("Multi tenant message context component activated.");
+        }
         //load the additional multitenant context property name list from property file if given and add to data holder
         loadTenantMessageContextProperties();
     }
 
-    @Deactivate
-    protected void deactivate() {
+    protected void deactivate(ComponentContext context) {
+        if (log.isDebugEnabled()) {
+            log.debug("Multi tenant message context component deactivated.");
+        }
     }
 
     /**
