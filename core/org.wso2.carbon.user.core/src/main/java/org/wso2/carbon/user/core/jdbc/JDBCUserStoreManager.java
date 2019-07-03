@@ -450,7 +450,16 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
 
     @Override
     public boolean doCheckIsUserInRole(String userName, String roleName) throws UserStoreException {
-        return isUserBelongsToExternalRole(userName, roleName);
+
+        String[] roles = doGetExternalRoleListOfUser(userName, roleName);
+        if (roles != null) {
+            for (String role : roles) {
+                if (role.equalsIgnoreCase(roleName)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     @Override
@@ -2909,22 +2918,30 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
         }
 
         String sqlStmt;
-        if (isCaseSensitiveUsername()) {
-            sqlStmt = realmConfig.getUserStoreProperty(JDBCRealmConstants.GET_USER_ROLE);
+        String[] names;
+        if(filter.equals("*")|| StringUtils.isEmpty(filter)) {
+
+            sqlStmt = getExternalRoleListSqlStatement(
+                    realmConfig.getUserStoreProperty(JDBCRealmConstants.GET_USER_ROLE),
+                    realmConfig.getUserStoreProperty(JDBCCaseInsensitiveConstants.GET_USER_ROLE_CASE_INSENSITIVE));
+            if (sqlStmt.contains(UserCoreConstants.UM_TENANT_COLUMN)) {
+                names = getStringValuesFromDatabase(sqlStmt, userName, tenantId, tenantId, tenantId);
+            } else {
+                names = getStringValuesFromDatabase(sqlStmt, userName);
+            }
         } else {
-            sqlStmt = realmConfig.getUserStoreProperty(JDBCCaseInsensitiveConstants.GET_USER_ROLE_CASE_INSENSITIVE);
+            sqlStmt = getExternalRoleListSqlStatement(
+                    realmConfig.getUserStoreProperty(JDBCRealmConstants.GET_IS_USER_ROLE_EXIST), realmConfig
+                            .getUserStoreProperty(
+                                    JDBCCaseInsensitiveConstants.GET_IS_USER_ROLE_EXIST_CASE_INSENSITIVE));
+
+            if (sqlStmt.contains(UserCoreConstants.UM_TENANT_COLUMN)) {
+                names = getStringValuesFromDatabase(sqlStmt, userName, tenantId, tenantId, tenantId, filter);
+            } else {
+                names = getStringValuesFromDatabase(sqlStmt, userName, filter);
+            }
         }
         List<String> roles = new ArrayList<String>();
-        String[] names;
-        if (sqlStmt == null) {
-            throw new UserStoreException("The sql statement for retrieving user roles is null");
-        }
-        if (sqlStmt.contains(UserCoreConstants.UM_TENANT_COLUMN)) {
-            names = getStringValuesFromDatabase(sqlStmt, userName, tenantId, tenantId, tenantId);
-        } else {
-            names = getStringValuesFromDatabase(sqlStmt, userName);
-        }
-
         if (log.isDebugEnabled()) {
             if (names != null) {
                 for (String name : names) {
@@ -2937,43 +2954,6 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
 
         Collections.addAll(roles, names);
         return roles.toArray(new String[roles.size()]);
-    }
-
-    private Boolean isUserBelongsToExternalRole(String userName, String role) throws UserStoreException {
-
-        String sqlStmt;
-        if (isCaseSensitiveUsername()) {
-            sqlStmt = realmConfig.getUserStoreProperty(JDBCRealmConstants.GET_IS_USER_ROLE_EXIST);
-        } else {
-            sqlStmt = realmConfig
-                    .getUserStoreProperty(JDBCCaseInsensitiveConstants.GET_IS_USER_ROLE_EXIST_CASE_INSENSITIVE);
-        }
-        List<String> roles = new ArrayList<String>();
-        String[] names;
-        if (sqlStmt == null) {
-            throw new UserStoreException("The sql statement for retrieving user roles is null");
-        }
-        if (sqlStmt.contains(UserCoreConstants.UM_TENANT_COLUMN)) {
-            names = getStringValuesFromDatabase(sqlStmt, userName, tenantId, tenantId, tenantId, role);
-        } else {
-            names = getStringValuesFromDatabase(sqlStmt, userName, role);
-        }
-
-        if (log.isDebugEnabled()) {
-            if (names != null) {
-                for (String name : names) {
-                    log.debug("Found role: " + name);
-                }
-            } else {
-                log.debug("No external role found for the user: " + userName);
-            }
-        }
-
-        if (names == null || names.length == 0) {
-            return false;
-        } else {
-            return true;
-        }
     }
 
     @Override
@@ -4323,5 +4303,27 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
     private boolean isCaseSensitiveUsername() {
         String isUsernameCaseInsensitiveString = realmConfig.getUserStoreProperty(CASE_INSENSITIVE_USERNAME);
         return !Boolean.parseBoolean(isUsernameCaseInsensitiveString);
+    }
+
+    /**
+     * Get the SQL statement for ExternalRoles.
+     *
+     * @param caseSensitiveUsernameQuery
+     * @param nonCaseSensitiveUsernameQuery
+     * @return sql statement.
+     * @throws UserStoreException
+     */
+    private String getExternalRoleListSqlStatement(String caseSensitiveUsernameQuery,
+            String nonCaseSensitiveUsernameQuery) throws UserStoreException {
+        String sqlStmt;
+        if (isCaseSensitiveUsername()) {
+            sqlStmt = caseSensitiveUsernameQuery;
+        } else {
+            sqlStmt = nonCaseSensitiveUsernameQuery;
+        }
+        if (sqlStmt == null) {
+            throw new UserStoreException("The sql statement for retrieving user roles is null");
+        }
+        return sqlStmt;
     }
 }

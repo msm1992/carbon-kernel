@@ -379,36 +379,6 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         return hybridRoleManager.getHybridRoleListOfUser(userName, filter);
     }
 
-    /**
-     * Check the internal roles of the user with internal domain name.
-     *
-     * @param userName Name of the user - who we need to find roles.
-     * @param roleName Name of the role.
-     * @return true or false.
-     * @throws UserStoreException
-     */
-    protected boolean isUserBelongsToInternalRole(String userName, String roleName) throws UserStoreException {
-
-        if (Boolean.parseBoolean(realmConfig.getUserStoreProperty(MULIPLE_ATTRIBUTE_ENABLE))) {
-            String userNameAttribute = realmConfig.getUserStoreProperty(LDAPConstants.USER_NAME_ATTRIBUTE);
-            if (userNameAttribute != null && userNameAttribute.trim().length() > 0) {
-                Map<String, String> getUserPropertyValue = getUserPropertyValues(userName,
-                        new String[] { userNameAttribute }, null);
-                String tempUserName = getUserPropertyValue.get(userNameAttribute);
-                if (tempUserName != null) {
-                    userName = tempUserName;
-                    if (log.isDebugEnabled()) {
-                        log.debug("Replaced user name : " + userName + " from user property value : " + tempUserName);
-                    }
-                }
-            }
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("Retrieving internal roles for user name :  " + userName + " and search filter " + roleName);
-        }
-        return hybridRoleManager.isHybridRoleListOfUser(userName, roleName);
-    }
-
     protected Map<String, List<String>> doGetInternalRoleListOfUsers(List<String> userNames, String domainName)
             throws UserStoreException {
 
@@ -4000,8 +3970,8 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                 equalsIgnoreCase(UserCoreUtil.extractDomainFromName(roleName))
                 || APPLICATION_DOMAIN.equalsIgnoreCase(UserCoreUtil.extractDomainFromName(roleName)) ||
                 WORKFLOW_DOMAIN.equalsIgnoreCase(UserCoreUtil.extractDomainFromName(roleName))) {
-
-            if (isUserBelongsToInternalRole(userName, roleName)) {
+            String[] internalRoles = doGetInternalRoleListOfUser(userName, roleName);
+            if (UserCoreUtil.isContain(roleName, internalRoles)) {
                 addToIsUserHasRole(modifiedUserName, roleName, roles);
                 return true;
             }
