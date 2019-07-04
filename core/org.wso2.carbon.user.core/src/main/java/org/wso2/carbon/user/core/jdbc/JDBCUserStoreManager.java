@@ -4311,8 +4311,8 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
     /**
      * Get the SQL statement for ExternalRoles.
      *
-     * @param caseSensitiveUsernameQuery
-     * @param nonCaseSensitiveUsernameQuery
+     * @param caseSensitiveUsernameQuery query for getting role with case sensitive username.
+     * @param nonCaseSensitiveUsernameQuery query for getting role with non-case sensitive username.
      * @return sql statement.
      * @throws UserStoreException
      */
