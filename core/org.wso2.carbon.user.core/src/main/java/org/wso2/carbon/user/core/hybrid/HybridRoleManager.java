@@ -882,8 +882,8 @@ public class HybridRoleManager {
     /**
      * Get the SQL statement for HybridRole.
      *
-     * @param getRoleListOfUserSQLConfig query for getting role set from resource property.
-     * @param caseSensitiveUsernameQuery query for getting role with case sensitive username.
+     * @param getRoleListOfUserSQLConfig    query for getting role set from resource property.
+     * @param caseSensitiveUsernameQuery    query for getting role with case sensitive username.
      * @param nonCaseSensitiveUsernameQuery query for getting role with non-case sensitive username.
      * @return sql statement.
      * @throws UserStoreException
