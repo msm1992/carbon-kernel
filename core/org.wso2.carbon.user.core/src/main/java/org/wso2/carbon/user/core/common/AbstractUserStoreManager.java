@@ -373,7 +373,9 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                 }
             }
         }
-        log.debug("Retrieving internal roles for user name :  " + userName + " and search filter " + filter);
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving internal roles for user name :  " + userName + " and search filter " + filter);
+        }
         return hybridRoleManager.getHybridRoleListOfUser(userName, filter);
     }
 
@@ -3968,8 +3970,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                 equalsIgnoreCase(UserCoreUtil.extractDomainFromName(roleName))
                 || APPLICATION_DOMAIN.equalsIgnoreCase(UserCoreUtil.extractDomainFromName(roleName)) ||
                 WORKFLOW_DOMAIN.equalsIgnoreCase(UserCoreUtil.extractDomainFromName(roleName))) {
-
-            String[] internalRoles = doGetInternalRoleListOfUser(userName, "*");
+            String[] internalRoles = doGetInternalRoleListOfUser(userName, roleName);
             if (UserCoreUtil.isContain(roleName, internalRoles)) {
                 addToIsUserHasRole(modifiedUserName, roleName, roles);
                 return true;
