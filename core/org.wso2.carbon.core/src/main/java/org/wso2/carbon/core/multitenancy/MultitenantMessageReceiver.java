@@ -746,6 +746,10 @@ public class MultitenantMessageReceiver implements MessageReceiver {
                 tenantMsgCtx.setProperty(key, mainMsgCtx.getProperty(key));
             }
         }
+
+        // copy additional super tenant message context properties read from multitenant-msg-context.properties file
+        // to tenant message context
+        TenantAxisUtils.copyAdditionalMsgContextProperties(mainMsgCtx, tenantMsgCtx);
     }
 
     private void handleException(MessageContext mainInMsgContext, AxisFault fault)
