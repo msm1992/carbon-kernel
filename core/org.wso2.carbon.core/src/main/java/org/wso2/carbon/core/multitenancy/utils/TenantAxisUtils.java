@@ -574,20 +574,20 @@ public final class TenantAxisUtils {
     }
 
     /**
-     * Copy the additional tenant message context properties (given in multitenant-msg-context.properties file)
-     * from super tenant message context to tenant message context
+     * Copy the additional properties (given in multitenant-msg-context.properties file)
+     * from given message context to the specified message context
      *
-     * @param superTenantMsgContext super tenant message context
-     * @param tenantMsgContext      tenant message context
+     * @param msgContextToCopyFrom message context to copy properties from
+     * @param msgContextToCopyTo   message context to copy properties to
      */
-    public static void setTenantMsgContextProperties(MessageContext superTenantMsgContext,
-                                                     MessageContext tenantMsgContext) {
+    public static void CopyAdditionalMsgContextProperties(MessageContext msgContextToCopyFrom,
+                                                          MessageContext msgContextToCopyTo) {
         List<String> tenantMsgContextProperties = MultitenantMsgContextDataHolder.getInstance()
                 .getTenantMsgContextProperties();
-        if (tenantMsgContext != null && superTenantMsgContext != null) {
+        if (msgContextToCopyTo != null && msgContextToCopyFrom != null) {
             for (String property : tenantMsgContextProperties) {
-                if (superTenantMsgContext.getProperty(property) != null) {
-                    tenantMsgContext.setProperty(property, superTenantMsgContext.getProperty(property));
+                if (msgContextToCopyFrom.getProperty(property) != null) {
+                    msgContextToCopyTo.setProperty(property, msgContextToCopyFrom.getProperty(property));
                 }
             }
         }

@@ -749,7 +749,7 @@ public class MultitenantMessageReceiver implements MessageReceiver {
 
         // copy additional super tenant message context properties read from multitenant-msg-context.properties file
         // to tenant message context
-        TenantAxisUtils.setTenantMsgContextProperties(mainMsgCtx, tenantMsgCtx);
+        TenantAxisUtils.CopyAdditionalMsgContextProperties(mainMsgCtx, tenantMsgCtx);
     }
 
     private void handleException(MessageContext mainInMsgContext, AxisFault fault)

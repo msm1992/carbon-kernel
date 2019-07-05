@@ -252,9 +252,9 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
             superTenantOutMessageContext.setProperty(NO_ENTITY_BODY, msgContext.getProperty(NO_ENTITY_BODY));
         }
 
-        // copy additional super tenant message context properties read from multitenant-msg-context.properties file
-        // to tenant message context
-        TenantAxisUtils.setTenantMsgContextProperties(msgContext, superTenantOutMessageContext);
+        // copy additional tenant message context properties read from multitenant-msg-context.properties file
+        // to super tenant message context
+        TenantAxisUtils.CopyAdditionalMsgContextProperties(msgContext, superTenantOutMessageContext);
 
         setDeleteRequestWithPayloadProperty(superTenantOutMessageContext, msgContext);
 
