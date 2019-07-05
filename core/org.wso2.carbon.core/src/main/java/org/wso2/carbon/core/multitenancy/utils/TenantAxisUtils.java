@@ -580,7 +580,7 @@ public final class TenantAxisUtils {
      * @param msgContextToCopyFrom message context to copy properties from
      * @param msgContextToCopyTo   message context to copy properties to
      */
-    public static void CopyAdditionalMsgContextProperties(MessageContext msgContextToCopyFrom,
+    public static void copyAdditionalMsgContextProperties(MessageContext msgContextToCopyFrom,
                                                           MessageContext msgContextToCopyTo) {
         List<String> tenantMsgContextProperties = MultitenantMsgContextDataHolder.getInstance()
                 .getTenantMsgContextProperties();
