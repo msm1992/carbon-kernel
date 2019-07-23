@@ -3771,28 +3771,31 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
         try {
             dirContext = this.connectionSource.getContext();
 
-            for (LdapName group : groupDNs) {
-                if (!isInSearchBase(group, new LdapName(groupSearchBase))) {
-                    continue;
-                }
-                if (debug) {
-                    log.debug("Using DN: " + group);
-                }
-                /* check to see if the required attribute can be retrieved by the DN itself */
-                Rdn rdn = group.getRdn(group.getRdns().size() - 1);
-                if (rdn.getType().equalsIgnoreCase(groupNameAttribute)) {
-                    groupNameAttributeValues.add(rdn.getValue().toString());
-                    continue;
-                }
-                Attributes groupAttributes = dirContext.getAttributes(group, returnedAttributes);
-                if (groupAttributes != null) {
-                    Attribute groupAttribute = groupAttributes.get(groupNameAttribute);
-                    if (groupAttribute != null) {
-                        String groupNameAttributeValue = (String) groupAttribute.get();
-                        if (debug) {
-                            log.debug(groupNameAttribute + " : " + groupNameAttributeValue);
+            String[] arr = StringUtils.split(groupSearchBase, "#");
+            for (String searchGroup : arr) {
+                for (LdapName group : groupDNs) {
+                    if (!isInSearchBase(group, new LdapName(searchGroup))) {
+                        continue;
+                    }
+                    if (debug) {
+                        log.debug("Using DN: " + group);
+                    }
+                    /* check to see if the required attribute can be retrieved by the DN itself */
+                    Rdn rdn = group.getRdn(group.getRdns().size() - 1);
+                    if (rdn.getType().equalsIgnoreCase(groupNameAttribute)) {
+                        groupNameAttributeValues.add(rdn.getValue().toString());
+                        continue;
+                    }
+                    Attributes groupAttributes = dirContext.getAttributes(group, returnedAttributes);
+                    if (groupAttributes != null) {
+                        Attribute groupAttribute = groupAttributes.get(groupNameAttribute);
+                        if (groupAttribute != null) {
+                            String groupNameAttributeValue = (String) groupAttribute.get();
+                            if (debug) {
+                                log.debug(groupNameAttribute + " : " + groupNameAttributeValue);
+                            }
+                            groupNameAttributeValues.add(groupNameAttributeValue);
                         }
-                        groupNameAttributeValues.add(groupNameAttributeValue);
                     }
                 }
             }
