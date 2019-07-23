@@ -3771,7 +3771,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
         try {
             dirContext = this.connectionSource.getContext();
 
-            String[] arr = groupSearchBase.split("#");
+            String[] arr = StringUtils.split(groupSearchBase, "#");
             for (String searchGroup : arr) {
                 for (LdapName group : groupDNs) {
                     if (!isInSearchBase(group, new LdapName(searchGroup))) {
