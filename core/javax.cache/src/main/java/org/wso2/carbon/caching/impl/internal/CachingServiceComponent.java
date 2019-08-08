@@ -20,9 +20,12 @@ package org.wso2.carbon.caching.impl.internal;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.service.component.ComponentContext;
+import org.osgi.framework.BundleContext;
 import org.wso2.carbon.base.api.ServerConfigurationService;
 import org.wso2.carbon.caching.impl.DataHolder;
 import org.wso2.carbon.caching.impl.DistributedMapProvider;
+import org.wso2.carbon.caching.impl.CachingAxisConfigurationObserver;
+import org.wso2.carbon.utils.Axis2ConfigurationContextObserver;
 import org.wso2.carbon.utils.ConfigurationContextService;
 
 /**
@@ -42,6 +45,12 @@ public class CachingServiceComponent {
        if(log.isDebugEnabled()){
            log.debug("CachingServiceComponent activated");
        }
+        //register service for CachingAxisConfigurationObserver
+        BundleContext bundleContext = ctx.getBundleContext();
+        CachingAxisConfigurationObserver cachingAxisConfigurationObserver =
+                new CachingAxisConfigurationObserver();
+        bundleContext.registerService(Axis2ConfigurationContextObserver.class.getName(),
+                cachingAxisConfigurationObserver, null);
     }
 
     protected void deactivate(ComponentContext ctx) {
