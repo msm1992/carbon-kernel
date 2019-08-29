@@ -30,6 +30,7 @@ import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.services.authentication.*;
 import org.wso2.carbon.server.admin.auth.AuthenticatorServerRegistry;
+import org.wso2.carbon.server.admin.util.AuthUtils;
 import org.wso2.carbon.utils.ServerConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
@@ -49,6 +50,14 @@ public class AuthenticationHandler extends AbstractHandler {
 
         // do not authenticate it is a call  to a generic service
         if (callToGeneralService(msgContext) || skipAuthentication(msgContext)) {
+            return InvocationResponse.CONTINUE;
+        }
+
+        if (AuthUtils.isAuthorizationDisabled(msgContext)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Authentication is skipped for the service " + msgContext.getAxisService().getName() +
+                        " from the configuration of DisableAuthorizationForSoapService at carbon.xml");
+            }
             return InvocationResponse.CONTINUE;
         }
 

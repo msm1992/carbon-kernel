@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.server.admin.util.AuthUtils;
 import org.wso2.carbon.user.core.AuthorizationManager;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreException;
@@ -51,6 +52,15 @@ public class AuthorizationHandler extends AbstractHandler {
         if (this.callToGeneralService(msgContext) || skipAuthentication(msgContext) ) {
             return InvocationResponse.CONTINUE;
         }
+
+        if (AuthUtils.isAuthorizationDisabled(msgContext)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Authorization is skipped for the service " + msgContext.getAxisService().getName() +
+                        " from the configuration of DisableAuthorizationForSoapService at carbon.xml");
+            }
+            return InvocationResponse.CONTINUE;
+        }
+
         if(CarbonUtils.isWorkerNode()){  // You are not allowed to invoke admin services on worker nodes
             HttpServletResponse response =
                     (HttpServletResponse) msgContext.getProperty(HTTPConstants.MC_HTTP_SERVLETRESPONSE);
