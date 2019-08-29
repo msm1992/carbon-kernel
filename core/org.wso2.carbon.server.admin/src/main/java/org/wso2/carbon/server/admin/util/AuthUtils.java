@@ -18,6 +18,8 @@ package org.wso2.carbon.server.admin.util;
 
 import org.apache.axis2.context.MessageContext;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -27,6 +29,8 @@ import org.wso2.carbon.base.ServerConfiguration;
  * Util class for the user authentication and authorization related operations.
  */
 public class AuthUtils {
+
+    private static final Log log = LogFactory.getLog(AuthUtils.class);
 
     private static final String DISABLE_AUTHORIZATION_PROPERTY = "DisableAuthorizationForSoapService";
     private static final String SERVICE_PROPERTY = "Service";
@@ -57,7 +61,13 @@ public class AuthUtils {
                     String serviceName = attributes.getNamedItem(SERVICE_NAME).getTextContent();
 
                     if (StringUtils.equals(serviceName, msgContext.getAxisService().getName())) {
-                        return Boolean.parseBoolean(attributes.getNamedItem(AUTHORIZATION_DECISION).getTextContent());
+                        boolean isDisabled =
+                                Boolean.parseBoolean(attributes.getNamedItem(AUTHORIZATION_DECISION).getTextContent());
+                        if (isDisabled) {
+                            log.info("Service " + serviceName + " has been configured to disable authorization " +
+                                    "with the property DisableAuthorizationForSoapService at carbon.xml.");
+                        }
+                        return isDisabled;
                     }
                 }
             }
