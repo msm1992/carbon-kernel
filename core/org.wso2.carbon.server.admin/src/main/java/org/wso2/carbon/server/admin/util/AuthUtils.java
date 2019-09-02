@@ -43,8 +43,10 @@ public class AuthUtils {
 
         for (String serviceName : serviceNames) {
             if (StringUtils.equals(serviceName, msgContext.getAxisService().getName())) {
-                log.info("Service " + serviceName + " has been configured to disable authorization " +
-                        "under DisableAuthorizationForSoapServices at carbon.xml.");
+                if (log.isDebugEnabled()) {
+                    log.debug("Service " + serviceName + " has been configured to disable authorization " +
+                            "under DisableAuthorizationForSoapServices at carbon.xml.");
+                }
                 return true;
             }
         }
