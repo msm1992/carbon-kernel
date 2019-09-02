@@ -56,7 +56,7 @@ public class AuthenticationHandler extends AbstractHandler {
         if (AuthUtils.isAuthorizationDisabled(msgContext)) {
             if (log.isDebugEnabled()) {
                 log.debug("Authentication is skipped for the service " + msgContext.getAxisService().getName() +
-                        " from the configuration of DisableAuthorizationForSoapService at carbon.xml");
+                        " by the configuration of DisableAuthorizationForSoapServices at carbon.xml");
             }
             return InvocationResponse.CONTINUE;
         }

@@ -20,9 +20,6 @@ import org.apache.axis2.context.MessageContext;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import org.wso2.carbon.base.ServerConfiguration;
 
 /**
@@ -32,10 +29,7 @@ public class AuthUtils {
 
     private static final Log log = LogFactory.getLog(AuthUtils.class);
 
-    private static final String DISABLE_AUTHORIZATION_PROPERTY = "DisableAuthorizationForSoapService";
-    private static final String SERVICE_PROPERTY = "Service";
-    private static final String SERVICE_NAME = "name";
-    private static final String AUTHORIZATION_DECISION = "disable";
+    private static final String DISABLE_AUTHORIZATION_PROPERTY = "DisableAuthorizationForSoapServices.Service";
 
     /**
      * Reads the configuration to decide whether the authorization is disabled for the service.
@@ -45,31 +39,15 @@ public class AuthUtils {
      */
     public static boolean isAuthorizationDisabled(MessageContext msgContext) {
 
-        NodeList serviceNodeCandidates = ServerConfiguration.getInstance().getDocumentElement()
-                .getElementsByTagName(DISABLE_AUTHORIZATION_PROPERTY);
+        String[] serviceNames = ServerConfiguration.getInstance().getProperties(DISABLE_AUTHORIZATION_PROPERTY);
 
-        if (serviceNodeCandidates != null && serviceNodeCandidates.item(0) != null) {
-
-            NodeList childNodes = serviceNodeCandidates.item(0).getChildNodes();
-            for (int i = 0; i < childNodes.getLength(); i++) {
-
-                Node childElement = childNodes.item(i);
-                if (childElement.getNodeType() == Node.ELEMENT_NODE && SERVICE_PROPERTY
-                        .equals(childElement.getNodeName())) {
-
-                    NamedNodeMap attributes = childElement.getAttributes();
-                    String serviceName = attributes.getNamedItem(SERVICE_NAME).getTextContent();
-
-                    if (StringUtils.equals(serviceName, msgContext.getAxisService().getName())) {
-                        boolean isDisabled =
-                                Boolean.parseBoolean(attributes.getNamedItem(AUTHORIZATION_DECISION).getTextContent());
-                        if (isDisabled) {
-                            log.info("Service " + serviceName + " has been configured to disable authorization " +
-                                    "with the property DisableAuthorizationForSoapService at carbon.xml.");
-                        }
-                        return isDisabled;
-                    }
+        for (String serviceName : serviceNames) {
+            if (StringUtils.equals(serviceName, msgContext.getAxisService().getName())) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Service " + serviceName + " has been configured to disable authorization " +
+                            "under DisableAuthorizationForSoapServices at carbon.xml.");
                 }
+                return true;
             }
         }
         return false;
