@@ -429,14 +429,7 @@ public class HybridRoleManager {
                         HybridJDBCConstants.GET_ROLE_OF_USER_SQL,
                         JDBCCaseInsensitiveConstants.GET_IS_USER_ROLE_SQL_CASE_INSENSITIVE);
 
-                // If the filter contains the internal domain, then here we remove the internal domain from the filter
-                // as the database only has the role name without the internal domain.
-                if (filter.toLowerCase().contains(UserCoreConstants.INTERNAL_DOMAIN.toLowerCase())) {
-                    int index;
-                    if ((index = filter.indexOf(CarbonConstants.DOMAIN_SEPARATOR)) >= 0) {
-                        filter = filter.substring(index + 1);
-                    }
-                }
+                filter = truncateInternalDomainFromFilter(filter);
                 roles = DatabaseUtil
                         .getStringValuesFromDatabase(dbConnection, sqlStmt, UserCoreUtil.removeDomainFromName(userName),
                                 tenantId, tenantId, tenantId, domain, filter);
@@ -446,12 +439,7 @@ public class HybridRoleManager {
                         HybridJDBCConstants.GET_USER_ROLE_NAME_SQL,
                         JDBCCaseInsensitiveConstants.GET_IS_USER_ROLE_SQL_CASE_INSENSITIVE);
 
-                if (filter.toLowerCase().contains(UserCoreConstants.INTERNAL_DOMAIN.toLowerCase())) {
-                    int index;
-                    if ((index = filter.indexOf(CarbonConstants.DOMAIN_SEPARATOR)) >= 0) {
-                        filter = filter.substring(index + 1);
-                    }
-                }
+                filter = truncateInternalDomainFromFilter(filter);
                 roles = DatabaseUtil
                         .getStringValuesFromDatabase(dbConnection, sqlStmt, UserCoreUtil.removeDomainFromName(userName),
                                 tenantId, tenantId, tenantId, domain, filter);
@@ -489,6 +477,24 @@ public class HybridRoleManager {
         } finally {
             DatabaseUtil.closeAllConnections(dbConnection);
         }
+    }
+
+    /**
+     * If the filter contains the internal domain, then here we remove the internal domain from the filter
+     * as the database only has the role name without the internal domain.
+     * @param filter raw filter
+     * @return truncated filter without the internal domain
+     */
+    private String truncateInternalDomainFromFilter(String filter) {
+
+        if (filter.toLowerCase().contains(UserCoreConstants.INTERNAL_DOMAIN.toLowerCase())
+                && filter.indexOf(UserCoreConstants.INTERNAL_DOMAIN.toLowerCase()) == 0) {
+            int index;
+            if ((index = filter.indexOf(CarbonConstants.DOMAIN_SEPARATOR)) >= 0) {
+                filter = filter.substring(index + 1);
+            }
+        }
+        return filter;
     }
 
     /**
