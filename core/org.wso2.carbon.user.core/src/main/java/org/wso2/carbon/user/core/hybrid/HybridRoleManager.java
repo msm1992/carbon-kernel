@@ -487,8 +487,10 @@ public class HybridRoleManager {
      */
     private String truncateInternalDomainFromFilter(String filter) {
 
-        if (filter.toLowerCase().contains(UserCoreConstants.INTERNAL_DOMAIN.toLowerCase())
-                && filter.indexOf(UserCoreConstants.INTERNAL_DOMAIN.toLowerCase()) == 0) {
+        String filterLowerCased = filter.toLowerCase();
+
+        if (filterLowerCased.contains(UserCoreConstants.INTERNAL_DOMAIN.toLowerCase())
+                && filterLowerCased.indexOf(UserCoreConstants.INTERNAL_DOMAIN.toLowerCase()) == 0) {
             int index;
             if ((index = filter.indexOf(CarbonConstants.DOMAIN_SEPARATOR)) >= 0) {
                 filter = filter.substring(index + 1);
