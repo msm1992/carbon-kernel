@@ -21,6 +21,7 @@ package org.wso2.carbon.user.core.common;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.caching.impl.CachingConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -68,7 +69,8 @@ public class UserRolesCache {
         CacheManager cacheManager = Caching.getCacheManagerFactory().getCacheManager(USER_ROLES_CACHE_MANAGER);
         Cache userRoleCache = null;
         for (Cache cache : cacheManager.getCaches()) {
-            if (StringUtils.equals(cache.getName(), USER_ROLES_CACHE)) {
+            if (StringUtils.equals(cache.getName(), USER_ROLES_CACHE) ||
+                    StringUtils.equals(cache.getName(), CachingConstants.LOCAL_CACHE_PREFIX + USER_ROLES_CACHE)) {
                 userRoleCache = cache;
             }
         }
