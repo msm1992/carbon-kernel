@@ -5699,7 +5699,8 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
      *
      * @param roleName Name of the role.
      * @param filter String filter value.
-     * @param maxItemLimit Maximum number of users in the returned array.
+     * @param maxItemLimit Maximum number of users in the returned array. A negative value return all users and zero
+     *                     returns zero users.
      * @return An array of users.
      * @throws UserStoreException
      */
