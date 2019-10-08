@@ -4267,6 +4267,9 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
         setAdvancedProperty(UserStoreConfigConstants.STARTTLS_ENABLED,
                 UserStoreConfigConstants.STARTTLS_ENABLED_DISPLAY_NAME, "false",
                 UserStoreConfigConstants.STARTTLS_ENABLED_DESCRIPTION);
+        setAdvancedProperty(UserStoreConfigConstants.enableMaxUserLimitForSCIM, UserStoreConfigConstants
+                        .enableMaxUserLimitDisplayName, "true",
+                UserStoreConfigConstants.enableMaxUserLimitForSCIMDescription);
     }
 
     private static void setAdvancedProperty(String name, String displayName, String value,
