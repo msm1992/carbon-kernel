@@ -5741,39 +5741,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
             return roleList;
         }
 
-        String[] internalRoles = doGetInternalRoleListOfUser(userName, filter);
-
-        String[] modifiedExternalRoleList = new String[0];
-
-        if (readGroupsEnabled && doCheckExistingUser(userName)) {
-            List<String> roles = new ArrayList<String>();
-            String[] externalRoles = doGetExternalRoleListOfUser(userName, "*");
-            roles.addAll(Arrays.asList(externalRoles));
-            if (isSharedGroupEnabled()) {
-                String[] sharedRoles = doGetSharedRoleListOfUser(userName, null, "*");
-                if (sharedRoles != null) {
-                    roles.addAll(Arrays.asList(sharedRoles));
-                }
-            }
-            modifiedExternalRoleList =
-                    UserCoreUtil.addDomainToNames(roles.toArray(new String[roles.size()]),
-                            getMyDomainName());
-        }
-
-        roleList = UserCoreUtil.combine(internalRoles, Arrays.asList(modifiedExternalRoleList));
-
-        for (UserOperationEventListener userOperationEventListener : UMListenerServiceComponent
-                .getUserOperationEventListeners()) {
-            if (userOperationEventListener instanceof AbstractUserOperationEventListener) {
-                if (!((AbstractUserOperationEventListener) userOperationEventListener)
-                        .doPostGetRoleListOfUser(userName, filter, roleList, this)) {
-                    break;
-                }
-            }
-        }
-        addToUserRolesCache(this.tenantId, userName, roleList);
-
-        return roleList;
+        return getUserRoles(userName, filter);
     }
 
     /**
@@ -5792,6 +5760,11 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
             Object object = callSecure("getRoleListOfUserFromDatabase", new Object[]{username, filter}, argTypes);
             return (String[]) object;
         }
+
+        return getUserRoles(username, filter);
+    }
+
+    private String[] getUserRoles(String username, String filter) throws UserStoreException {
 
         String[] internalRoles = doGetInternalRoleListOfUser(username, filter);
         String[] modifiedExternalRoleList = new String[0];
@@ -5822,8 +5795,8 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                 }
             }
         }
-        addToUserRolesCache(this.tenantId, username, roleList);
 
+        addToUserRolesCache(this.tenantId, username, roleList);
         return roleList;
     }
 
