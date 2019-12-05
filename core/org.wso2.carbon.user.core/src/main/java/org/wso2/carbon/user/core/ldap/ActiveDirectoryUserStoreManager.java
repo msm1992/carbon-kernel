@@ -34,6 +34,9 @@ import org.wso2.carbon.utils.Secret;
 import org.wso2.carbon.utils.UnsupportedSecretTypeException;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -152,6 +155,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
 
 		/* setting claims */
         setUserClaims(claims, basicAttributes, userName);
+        processAttributesBeforeUpdate(basicAttributes);
 
         Secret credentialObj;
         try {
@@ -591,6 +595,8 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
             // update the attributes in the relevant entry of the directory
             // store
 
+            processAttributesBeforeUpdate(updatedAttributes);
+
             subDirContext = (DirContext) dirContext.lookup(escapeDNForSearch(userSearchBase));
             subDirContext.modifyAttributes(returnedUserEntry, DirContext.REPLACE_ATTRIBUTE,
                     updatedAttributes);
@@ -606,6 +612,21 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
             JNDIUtil.closeContext(dirContext);
         }
 
+    }
+
+    private void processAttributesBeforeUpdate(Attributes attributes) {
+        realmConfig.getUserStoreProperty("isUserStorePropertyEnabled");
+        boolean isUserStorePropertyEnabled = true;
+
+        if (isUserStorePropertyEnabled) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("User properties for update: " + attributes);
+            }
+
+            attributes.remove("objectGuid");
+            attributes.remove("whenCreated");
+            attributes.remove("whenChanged");
+        }
     }
 
     @Override
@@ -928,6 +949,37 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
         Property property = new Property(name, value, displayName + "#" + description, null);
         ACTIVE_DIRECTORY_UM_ADVANCED_PROPERTIES.add(property);
 
+    }
+
+    @Override
+    protected void processAttributesAfterRetrieval(Map<String, String> userPropertyValues) {
+        // TODO: 12/5/19 Read user store property
+        boolean isDefaultAttributeUsageEnabled = true;
+
+        if (isDefaultAttributeUsageEnabled) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("User properties retrieved: " + userPropertyValues);
+            }
+
+            String whenCreatedAttributeValue = userPropertyValues.get("whenCreated");
+            String whenChangedAttributeValue = userPropertyValues.get("whenChanged");
+
+            if (whenCreatedAttributeValue != null) {
+                userPropertyValues.replace("whenCreated", convertDateFormatFromAD(whenCreatedAttributeValue));
+            }
+
+            if (whenChangedAttributeValue != null) {
+                userPropertyValues.replace("whenChanged", convertDateFormatFromAD(whenChangedAttributeValue));
+            }
+        }
+    }
+
+    private String convertDateFormatFromAD(String fromDate) {
+
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern ("uuuuMMddHHmmss[,S][.S]X");
+        OffsetDateTime odt = OffsetDateTime.parse (fromDate , dateTimeFormatter);
+        Instant instant = odt.toInstant ();
+        return instant.toString();
     }
 
 }
