@@ -614,21 +614,6 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
 
     }
 
-    private void processAttributesBeforeUpdate(Attributes attributes) {
-        realmConfig.getUserStoreProperty("isUserStorePropertyEnabled");
-        boolean isUserStorePropertyEnabled = true;
-
-        if (isUserStorePropertyEnabled) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("User properties for update: " + attributes);
-            }
-
-            attributes.remove("objectGuid");
-            attributes.remove("whenCreated");
-            attributes.remove("whenChanged");
-        }
-    }
-
     @Override
     public void doSetUserClaimValue(String userName, String claimURI, String value,
                                     String profileName) throws UserStoreException {
@@ -941,6 +926,8 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
         setAdvancedProperty(UserStoreConfigConstants.enableMaxUserLimitForSCIM, UserStoreConfigConstants
                         .enableMaxUserLimitDisplayName, "false",
                 UserStoreConfigConstants.enableMaxUserLimitForSCIMDescription);
+        setAdvancedProperty("DefaultAttributeUsageEnabled", "Enable Default Attributes Usage", "false",
+                "Whether to use AD maintained default attributes");
     }
 
 
@@ -951,10 +938,28 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
 
     }
 
+    private void processAttributesBeforeUpdate(Attributes attributes) {
+        String isDefaultAttributeUsageEnabledProperty = realmConfig
+                .getUserStoreProperty("DefaultAttributeUsageEnabled");
+        boolean isDefaultAttributeUsageEnabled = Boolean.parseBoolean(isDefaultAttributeUsageEnabledProperty);
+
+        if (isDefaultAttributeUsageEnabled) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("User properties for update: " + attributes);
+            }
+
+            attributes.remove("objectGuid");
+            attributes.remove("whenCreated");
+            attributes.remove("whenChanged");
+        }
+    }
+
     @Override
     protected void processAttributesAfterRetrieval(Map<String, String> userPropertyValues) {
-        // TODO: 12/5/19 Read user store property
-        boolean isDefaultAttributeUsageEnabled = true;
+
+        String isDefaultAttributeUsageEnabledProperty = realmConfig
+                .getUserStoreProperty("DefaultAttributeUsageEnabled");
+        boolean isDefaultAttributeUsageEnabled = Boolean.parseBoolean(isDefaultAttributeUsageEnabledProperty);
 
         if (isDefaultAttributeUsageEnabled) {
             if (logger.isDebugEnabled()) {
