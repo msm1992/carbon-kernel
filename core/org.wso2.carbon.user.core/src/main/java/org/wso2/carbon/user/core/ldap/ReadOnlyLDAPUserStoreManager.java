@@ -2591,7 +2591,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
         String userPropertyName =
                 realmConfig.getUserStoreProperty(LDAPConstants.USER_NAME_ATTRIBUTE);
 
-        if (property.equalsIgnoreCase("objectGuid")) {
+        if (property.equalsIgnoreCase(OBJECT_GUID)) {
             String transformObjectGuidToUuidProperty =
                     realmConfig.getUserStoreProperty(TRANSFORM_OBJECTGUID_TO_UUID);
 
