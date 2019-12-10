@@ -38,6 +38,8 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.StringTokenizer;
 import javax.naming.Name;
@@ -155,7 +157,6 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
 
 		/* setting claims */
         setUserClaims(claims, basicAttributes, userName);
-        processAttributesBeforeUpdate(basicAttributes);
 
         Secret credentialObj;
         try {
@@ -225,6 +226,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
                                  String userName) throws UserStoreException {
         if (claims != null) {
             BasicAttribute claim;
+            Map<String, String> userStoreProperties = new HashMap<>();
 
             for (Map.Entry<String, String> entry : claims.entrySet()) {
                 // avoid attributes with empty values
@@ -239,7 +241,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
                     continue;
                 }
 
-                String attributeName = null;
+                String attributeName;
                 try {
                     attributeName = getClaimAtrribute(claimURI, userName, null);
                 } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -247,11 +249,16 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
                     throw new UserStoreException(errorMessage, e);
                 }
 
-                claim = new BasicAttribute(attributeName);
-                claim.add(claims.get(entry.getKey()));
+                userStoreProperties.put(attributeName, entry.getValue());
+            }
+
+            processAttributesBeforeUpdate(userStoreProperties);
+
+            for (Map.Entry<String, String> entry : userStoreProperties.entrySet()) {
+                claim = new BasicAttribute(entry.getKey());
+                claim.add(entry.getValue());
                 if (logger.isDebugEnabled()) {
-                    logger.debug("AttributeName: " + attributeName + " AttributeValue: " +
-                            claims.get(entry.getKey()));
+                    logger.debug("AttributeName: " + entry.getKey() + " AttributeValue: " + entry.getValue());
                 }
                 basicAttributes.put(claim);
             }
@@ -538,34 +545,36 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
 
         try {
             Attributes updatedAttributes = new BasicAttributes(true);
+            Map<String, String> userStoreProperties = new HashMap<>();
 
-            String domainName =
-                    userName.indexOf(UserCoreConstants.DOMAIN_SEPARATOR) > -1
-                            ? userName.split(UserCoreConstants.DOMAIN_SEPARATOR)[0]
-                            : realmConfig.getUserStoreProperty(UserStoreConfigConstants.DOMAIN_NAME);
             for (Map.Entry<String, String> claimEntry : claims.entrySet()) {
-                String claimURI = claimEntry.getKey();
+                userStoreProperties.put(getClaimAtrribute(claimEntry.getKey(), userName, null),
+                        claimEntry.getValue());
+            }
+
+            processAttributesBeforeUpdate(userStoreProperties);
+
+            for (Map.Entry<String, String> claimEntry : userStoreProperties.entrySet()) {
+                String userStoreAttribute = claimEntry.getKey();
                 // if there is no attribute for profile configuration in LDAP,
                 // skip updating it.
-                if (claimURI.equals(UserCoreConstants.PROFILE_CONFIGURATION)) {
+                if (userStoreAttribute.equals(UserCoreConstants.PROFILE_CONFIGURATION)) {
                     continue;
                 }
-                // get the claimMapping related to this claimURI
-                String attributeName = getClaimAtrribute(claimURI, userName, null);
                 //remove user DN from cache if changing username attribute
                 if (realmConfig.getUserStoreProperty(LDAPConstants.USER_NAME_ATTRIBUTE).equals
-                        (attributeName)) {
+                        (userStoreAttribute)) {
                     removeFromUserCache(userName);
                 }
                 // if mapped attribute is CN, then skip treating as a modified
                 // attribute -
                 // it should be an object rename
-                if ("CN".toLowerCase().equals(attributeName.toLowerCase())) {
+                if ("CN".toLowerCase().equals(userStoreAttribute.toLowerCase())) {
                     cnModified = true;
                     cnValue = claimEntry.getValue();
                     continue;
                 }
-                Attribute currentUpdatedAttribute = new BasicAttribute(attributeName);
+                Attribute currentUpdatedAttribute = new BasicAttribute(userStoreAttribute);
 				/* if updated attribute value is null, remove its values. */
                 if (EMPTY_ATTRIBUTE_STRING.equals(claimEntry.getValue())) {
                     currentUpdatedAttribute.clear();
@@ -594,8 +603,6 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
             }
             // update the attributes in the relevant entry of the directory
             // store
-
-            processAttributesBeforeUpdate(updatedAttributes);
 
             subDirContext = (DirContext) dirContext.lookup(escapeDNForSearch(userSearchBase));
             subDirContext.modifyAttributes(returnedUserEntry, DirContext.REPLACE_ATTRIBUTE,
@@ -926,8 +933,9 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
         setAdvancedProperty(UserStoreConfigConstants.enableMaxUserLimitForSCIM, UserStoreConfigConstants
                         .enableMaxUserLimitDisplayName, "false",
                 UserStoreConfigConstants.enableMaxUserLimitForSCIMDescription);
-        setAdvancedProperty("DefaultAttributeUsageEnabled", "Enable Default Attributes Usage", "false",
-                "Whether to use AD maintained default attributes");
+        setAdvancedProperty(UserStoreConfigConstants.defaultAttributeUsageEnabled,
+                UserStoreConfigConstants.defaultAttributeUsageEnabledDisplayName, "false",
+                UserStoreConfigConstants.defaultAttributeUsageEnabledDescription);
     }
 
 
@@ -938,19 +946,19 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
 
     }
 
-    private void processAttributesBeforeUpdate(Attributes attributes) {
+    @Override
+    protected void processAttributesBeforeUpdate(Map<String, String> userStoreProperties) {
         String isDefaultAttributeUsageEnabledProperty = realmConfig
-                .getUserStoreProperty("DefaultAttributeUsageEnabled");
+                .getUserStoreProperty(UserStoreConfigConstants.defaultAttributeUsageEnabled);
         boolean isDefaultAttributeUsageEnabled = Boolean.parseBoolean(isDefaultAttributeUsageEnabledProperty);
+        final String[] propertiesToBeRemoved = {"objectGuid", "whenCreated", "whenChanged"};
 
         if (isDefaultAttributeUsageEnabled) {
             if (logger.isDebugEnabled()) {
-                logger.debug("User properties for update: " + attributes);
+                logger.debug("User properties for update: " + userStoreProperties);
             }
 
-            attributes.remove("objectGuid");
-            attributes.remove("whenCreated");
-            attributes.remove("whenChanged");
+            Arrays.stream(propertiesToBeRemoved).forEach(userStoreProperties::remove);
         }
     }
 
@@ -958,7 +966,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
     protected void processAttributesAfterRetrieval(Map<String, String> userPropertyValues) {
 
         String isDefaultAttributeUsageEnabledProperty = realmConfig
-                .getUserStoreProperty("DefaultAttributeUsageEnabled");
+                .getUserStoreProperty(UserStoreConfigConstants.defaultAttributeUsageEnabled);
         boolean isDefaultAttributeUsageEnabled = Boolean.parseBoolean(isDefaultAttributeUsageEnabledProperty);
 
         if (isDefaultAttributeUsageEnabled) {

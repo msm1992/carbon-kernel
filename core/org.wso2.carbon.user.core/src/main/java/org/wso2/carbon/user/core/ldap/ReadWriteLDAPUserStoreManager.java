@@ -884,24 +884,30 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
         }
         try {
             Attributes updatedAttributes = new BasicAttributes(true);
+            Map<String, String> userStoreProperties = new HashMap<>();
 
             for (Map.Entry<String, String> claimEntry : claims.entrySet()) {
-                String claimURI = claimEntry.getKey();
+                userStoreProperties.put(getClaimAtrribute(claimEntry.getKey(), userName, null),
+                        claimEntry.getValue());
+            }
+
+            processAttributesBeforeUpdate(userStoreProperties);
+
+            for (Map.Entry<String, String> claimEntry : userStoreProperties.entrySet()) {
+                String userStoreAttribute = claimEntry.getKey();
                 // if there is no attribute for profile configuration in LDAP,
                 // skip updating it.
-                if (claimURI.equals(UserCoreConstants.PROFILE_CONFIGURATION)) {
+                if (userStoreAttribute.equals(UserCoreConstants.PROFILE_CONFIGURATION)) {
                     continue;
                 }
-                // get the claimMapping related to this claimURI
-                String attributeName = getClaimAtrribute(claimURI, userName, null);
                 //remove user DN from cache if changing username attribute
                 if (realmConfig.getUserStoreProperty(LDAPConstants.USER_NAME_ATTRIBUTE).equals
-                        (attributeName)) {
+                        (userStoreAttribute)) {
                     removeFromUserCache(userName);
                 }
                 // if uid attribute value contains domain name, remove domain
                 // name
-                if (attributeName.equals("uid")) {
+                if (userStoreAttribute.equals("uid")) {
                     // if user name contains domain name, remove domain name
                     String uidName = claimEntry.getValue();
                     String[] uidNames = uidName.split(CarbonConstants.DOMAIN_SEPARATOR);
@@ -911,13 +917,14 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                     }
 //                    claimEntry.setValue(escapeISSpecialCharacters(uidName));
                 }
-                Attribute currentUpdatedAttribute = new BasicAttribute(attributeName);
+                Attribute currentUpdatedAttribute = new BasicAttribute(userStoreAttribute);
 				/* if updated attribute value is null, remove its values. */
                 if (EMPTY_ATTRIBUTE_STRING.equals(claimEntry.getValue())) {
                     currentUpdatedAttribute.clear();
                 } else {
                     String userAttributeSeparator = ",";
-                    if (claimEntry.getValue() != null && !attributeName.equals("uid") && !attributeName.equals("sn")) {
+                    if (claimEntry.getValue() != null && !userStoreAttribute.equals("uid")
+                            && !userStoreAttribute.equals("sn")) {
                         String claimSeparator = realmConfig.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR);
                         if (claimSeparator != null && !claimSeparator.trim().isEmpty()) {
                             userAttributeSeparator = claimSeparator;

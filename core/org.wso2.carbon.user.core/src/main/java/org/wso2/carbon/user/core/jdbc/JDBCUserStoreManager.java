@@ -75,6 +75,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.stream.Collectors;
 import javax.sql.DataSource;
 
 import static org.wso2.carbon.user.core.constants.UserCoreErrorConstants.ErrorMessages.ERROR_CODE_DUPLICATE_WHILE_ADDING_A_USER;
@@ -2232,6 +2233,7 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
 
             ArrayList<String> propertyListToUpdate = new ArrayList<>();
             Map<String, String> claimPropertyMap = new HashMap<>();
+            Map<String, String> attributeValueMap = new HashMap<>();
             Iterator<Map.Entry<String, String>> ite = claims.entrySet().iterator();
 
             // Get the property names fo the claims
@@ -2241,8 +2243,14 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
 
                 String property = getClaimAtrribute(claimURI, userName, null);
                 propertyListToUpdate.add(property);
-                claimPropertyMap.put(claimURI, property);
+                claimPropertyMap.put(property, claimURI);
+                attributeValueMap.put(property, entry.getValue());
             }
+
+            processAttributesBeforeUpdate(attributeValueMap);
+            claimPropertyMap.keySet().retainAll(attributeValueMap.keySet());
+            claimPropertyMap = claimPropertyMap.entrySet().stream().collect(Collectors
+                    .toMap(Map.Entry::getValue, Map.Entry::getKey));
 
             String[] propertyArr = new String[propertyListToUpdate.size()];
             propertyArr = propertyListToUpdate.toArray(propertyArr);

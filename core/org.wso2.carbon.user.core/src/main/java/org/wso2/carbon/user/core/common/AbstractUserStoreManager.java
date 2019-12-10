@@ -68,9 +68,6 @@ import java.nio.CharBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -5361,7 +5358,19 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         return finalValues;
     }
 
-    protected void processAttributesAfterRetrieval(Map<String, String> userPropertyValues) {
+    /**
+     * Handles the processing of any special user store attribute values after retrieval.
+     * @param userStoreProperties un-processed map of user store attribute values
+     */
+    protected void processAttributesAfterRetrieval(Map<String, String> userStoreProperties) {
+
+    }
+
+    /**
+     * Handles the processing of any special user store attribute values before update.
+     * @param userStoreProperties un-processed map of user store attribute values
+     */
+    protected void processAttributesBeforeUpdate(Map<String, String> userStoreProperties) {
 
     }
 

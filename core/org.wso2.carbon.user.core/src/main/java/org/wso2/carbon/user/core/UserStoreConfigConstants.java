@@ -43,6 +43,10 @@ public class UserStoreConfigConstants {
     public static final String enableMaxUserLimitForSCIMDescription = "Whether to include max user limit during SCIM " +
             "user list operation";
     public static final String enableMaxUserLimitDisplayName = "Enable MaxUserLimit For SCIM";
+    public static final String defaultAttributeUsageEnabled = "DefaultAttributeUsageEnabled";
+    public static final String defaultAttributeUsageEnabledDescription = "Whether to use AD maintained default " +
+            "attributes";
+    public static final String defaultAttributeUsageEnabledDisplayName = "Enable Default Attributes Usage";
 
     //Mandatory to LDAP user stores
     public static final String connectionURL = "ConnectionURL";
