@@ -573,7 +573,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
                     removeFromUserCache(userName);
                 }
 
-                // If mapped attribute is CN, then skip treating as a modified
+                // if mapped attribute is CN, then skip treating as a modified
                 // attribute -
                 // it should be an object rename
                 if ("CN".toLowerCase().equals(attributeName.toLowerCase())) {
