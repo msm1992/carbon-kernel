@@ -1018,8 +1018,8 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
 
     private String convertDateFormatFromAD(String fromDate) {
 
-        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern (ACTIVE_DIRECTORY_DATE_TIME_FORMAT);
-        OffsetDateTime offsetDateTime = OffsetDateTime.parse (fromDate , dateTimeFormatter);
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(ACTIVE_DIRECTORY_DATE_TIME_FORMAT);
+        OffsetDateTime offsetDateTime = OffsetDateTime.parse(fromDate , dateTimeFormatter);
         Instant instant = offsetDateTime.toInstant();
         return instant.toString();
     }
