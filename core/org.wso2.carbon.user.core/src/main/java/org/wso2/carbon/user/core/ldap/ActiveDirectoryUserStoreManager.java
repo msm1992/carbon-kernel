@@ -561,28 +561,27 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
             processAttributesBeforeUpdate(userStoreProperties);
 
             for (Map.Entry<String, String> claimEntry : userStoreProperties.entrySet()) {
-                String userStoreAttribute = claimEntry.getKey();
-
-                // If there is no attribute for profile configuration in LDAP,
+                String attributeName = claimEntry.getKey();
+                // if there is no attribute for profile configuration in LDAP,
                 // skip updating it.
-                if (userStoreAttribute.equals(UserCoreConstants.PROFILE_CONFIGURATION)) {
+                if (attributeName.equals(UserCoreConstants.PROFILE_CONFIGURATION)) {
                     continue;
                 }
                 //remove user DN from cache if changing username attribute
                 if (realmConfig.getUserStoreProperty(LDAPConstants.USER_NAME_ATTRIBUTE).equals
-                        (userStoreAttribute)) {
+                        (attributeName)) {
                     removeFromUserCache(userName);
                 }
 
                 // If mapped attribute is CN, then skip treating as a modified
                 // attribute -
                 // it should be an object rename
-                if ("CN".toLowerCase().equals(userStoreAttribute.toLowerCase())) {
+                if ("CN".toLowerCase().equals(attributeName.toLowerCase())) {
                     cnModified = true;
                     cnValue = claimEntry.getValue();
                     continue;
                 }
-                Attribute currentUpdatedAttribute = new BasicAttribute(userStoreAttribute);
+                Attribute currentUpdatedAttribute = new BasicAttribute(attributeName);
 				/* if updated attribute value is null, remove its values. */
                 if (EMPTY_ATTRIBUTE_STRING.equals(claimEntry.getValue())) {
                     currentUpdatedAttribute.clear();

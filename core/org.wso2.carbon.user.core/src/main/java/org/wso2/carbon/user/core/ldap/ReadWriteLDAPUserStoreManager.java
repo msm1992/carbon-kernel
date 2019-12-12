@@ -894,21 +894,20 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             processAttributesBeforeUpdate(userStoreProperties);
 
             for (Map.Entry<String, String> claimEntry : userStoreProperties.entrySet()) {
-                String userStoreAttribute = claimEntry.getKey();
-
-                // If there is no attribute for profile configuration in LDAP,
+                String attributeName = claimEntry.getKey();
+                // if there is no attribute for profile configuration in LDAP,
                 // skip updating it.
-                if (userStoreAttribute.equals(UserCoreConstants.PROFILE_CONFIGURATION)) {
+                if (attributeName.equals(UserCoreConstants.PROFILE_CONFIGURATION)) {
                     continue;
                 }
                 //remove user DN from cache if changing username attribute
                 if (realmConfig.getUserStoreProperty(LDAPConstants.USER_NAME_ATTRIBUTE).equals
-                        (userStoreAttribute)) {
+                        (attributeName)) {
                     removeFromUserCache(userName);
                 }
                 // if uid attribute value contains domain name, remove domain
                 // name
-                if (userStoreAttribute.equals("uid")) {
+                if (attributeName.equals("uid")) {
                     // if user name contains domain name, remove domain name
                     String uidName = claimEntry.getValue();
                     String[] uidNames = uidName.split(CarbonConstants.DOMAIN_SEPARATOR);
@@ -918,14 +917,14 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                     }
 //                    claimEntry.setValue(escapeISSpecialCharacters(uidName));
                 }
-                Attribute currentUpdatedAttribute = new BasicAttribute(userStoreAttribute);
+                Attribute currentUpdatedAttribute = new BasicAttribute(attributeName);
 				/* if updated attribute value is null, remove its values. */
                 if (EMPTY_ATTRIBUTE_STRING.equals(claimEntry.getValue())) {
                     currentUpdatedAttribute.clear();
                 } else {
                     String userAttributeSeparator = ",";
-                    if (claimEntry.getValue() != null && !userStoreAttribute.equals("uid")
-                            && !userStoreAttribute.equals("sn")) {
+                    if (claimEntry.getValue() != null && !attributeName.equals("uid")
+                            && !attributeName.equals("sn")) {
                         String claimSeparator = realmConfig.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR);
                         if (claimSeparator != null && !claimSeparator.trim().isEmpty()) {
                             userAttributeSeparator = claimSeparator;
