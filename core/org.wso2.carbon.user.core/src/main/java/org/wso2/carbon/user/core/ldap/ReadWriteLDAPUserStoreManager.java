@@ -895,7 +895,8 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
 
             for (Map.Entry<String, String> claimEntry : userStoreProperties.entrySet()) {
                 String userStoreAttribute = claimEntry.getKey();
-                // if there is no attribute for profile configuration in LDAP,
+
+                // If there is no attribute for profile configuration in LDAP,
                 // skip updating it.
                 if (userStoreAttribute.equals(UserCoreConstants.PROFILE_CONFIGURATION)) {
                     continue;

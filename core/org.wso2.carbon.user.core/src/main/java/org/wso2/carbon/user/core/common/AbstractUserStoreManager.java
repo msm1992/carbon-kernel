@@ -5365,6 +5365,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
      */
     protected void processAttributesAfterRetrieval(Map<String, String> userStoreProperties) {
 
+        // Not implemented
     }
 
     /**
@@ -5374,6 +5375,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
      */
     protected void processAttributesBeforeUpdate(Map<String, String> userStoreProperties) {
 
+        // Not implemented
     }
 
 

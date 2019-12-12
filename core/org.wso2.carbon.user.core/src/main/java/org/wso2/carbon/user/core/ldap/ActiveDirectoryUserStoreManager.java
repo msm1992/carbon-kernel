@@ -562,7 +562,8 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
 
             for (Map.Entry<String, String> claimEntry : userStoreProperties.entrySet()) {
                 String userStoreAttribute = claimEntry.getKey();
-                // if there is no attribute for profile configuration in LDAP,
+
+                // If there is no attribute for profile configuration in LDAP,
                 // skip updating it.
                 if (userStoreAttribute.equals(UserCoreConstants.PROFILE_CONFIGURATION)) {
                     continue;
@@ -572,7 +573,8 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
                         (userStoreAttribute)) {
                     removeFromUserCache(userName);
                 }
-                // if mapped attribute is CN, then skip treating as a modified
+
+                // If mapped attribute is CN, then skip treating as a modified
                 // attribute -
                 // it should be an object rename
                 if ("CN".toLowerCase().equals(userStoreAttribute.toLowerCase())) {
