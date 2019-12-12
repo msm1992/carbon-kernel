@@ -17,6 +17,8 @@
  */
 package org.wso2.carbon.user.core.ldap;
 
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
@@ -41,7 +43,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.StringTokenizer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import javax.naming.Name;
 import javax.naming.NameParser;
 import javax.naming.NamingEnumeration;
@@ -81,6 +86,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
     private static final String RETRY_ATTEMPTS = "RetryAttempts";
     private static final String LDAPBinaryAttributesDescription = "Configure this to define the LDAP binary attributes " +
             "seperated by a space. Ex:mpegVideo mySpecialKey";
+    private static final String ACTIVE_DIRECTORY_DATE_TIME_FORMAT = "uuuuMMddHHmmss[,S][.S]X";
 
     // For AD's this value is 1500 by default, hence overriding the default value.
     protected static final int MEMBERSHIP_ATTRIBUTE_RANGE_VALUE = 1500;
@@ -933,9 +939,12 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
         setAdvancedProperty(UserStoreConfigConstants.enableMaxUserLimitForSCIM, UserStoreConfigConstants
                         .enableMaxUserLimitDisplayName, "false",
                 UserStoreConfigConstants.enableMaxUserLimitForSCIMDescription);
-        setAdvancedProperty(UserStoreConfigConstants.defaultAttributeUsageEnabled,
-                UserStoreConfigConstants.defaultAttributeUsageEnabledDisplayName, "false",
-                UserStoreConfigConstants.defaultAttributeUsageEnabledDescription);
+        setAdvancedProperty(UserStoreConfigConstants.immutableAttributes,
+                UserStoreConfigConstants.immutableAttributesDisplayName, " ",
+                UserStoreConfigConstants.immutableAttributesDescription);
+        setAdvancedProperty(UserStoreConfigConstants.timestampAttributes,
+                UserStoreConfigConstants.timestampAttributesDisplayName, " ",
+                UserStoreConfigConstants.timestampAttributesDescription);
     }
 
 
@@ -947,51 +956,68 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
     }
 
     @Override
-    protected void processAttributesBeforeUpdate(Map<String, String> userStoreProperties) {
-        String isDefaultAttributeUsageEnabledProperty = realmConfig
-                .getUserStoreProperty(UserStoreConfigConstants.defaultAttributeUsageEnabled);
-        boolean isDefaultAttributeUsageEnabled = Boolean.parseBoolean(isDefaultAttributeUsageEnabledProperty);
-        final String[] propertiesToBeRemoved = {"objectGuid", "whenCreated", "whenChanged"};
+    protected void processAttributesBeforeUpdate(Map<String, String> userStorePropertyValues) {
+        String immutableAttributesProperty = Optional.ofNullable(realmConfig
+                .getUserStoreProperty(UserStoreConfigConstants.immutableAttributes)).orElse("");
 
-        if (isDefaultAttributeUsageEnabled) {
+        String[] immutableAttributes = StringUtils.split(immutableAttributesProperty, ",");
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("Active Directory maintained immutable attributes: " + Arrays.toString(immutableAttributes));
+        }
+
+        if (ArrayUtils.isNotEmpty(immutableAttributes)) {
             if (logger.isDebugEnabled()) {
-                logger.debug("User properties for update: " + userStoreProperties);
+                logger.debug("Updated user store properties before attribute filtering: " + userStorePropertyValues);
             }
 
-            Arrays.stream(propertiesToBeRemoved).forEach(userStoreProperties::remove);
+            Arrays.stream(immutableAttributes).forEach(userStorePropertyValues::remove);
+
+            if (logger.isDebugEnabled()) {
+                logger.debug("Updated user store properties after attribute filtering: " + userStorePropertyValues);
+            }
         }
     }
 
     @Override
-    protected void processAttributesAfterRetrieval(Map<String, String> userPropertyValues) {
+    protected void processAttributesAfterRetrieval(Map<String, String> userStorePropertyValues) {
 
-        String isDefaultAttributeUsageEnabledProperty = realmConfig
-                .getUserStoreProperty(UserStoreConfigConstants.defaultAttributeUsageEnabled);
-        boolean isDefaultAttributeUsageEnabled = Boolean.parseBoolean(isDefaultAttributeUsageEnabledProperty);
+        String timestampAttributesProperty = Optional.ofNullable(realmConfig
+                .getUserStoreProperty(UserStoreConfigConstants.timestampAttributes)).orElse("");
 
-        if (isDefaultAttributeUsageEnabled) {
+        String[] timestampAttributes = StringUtils.split(timestampAttributesProperty, ",");
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("Active Directory timestamp attributes: " + Arrays.toString(timestampAttributes));
+        }
+
+        if (ArrayUtils.isNotEmpty(timestampAttributes)) {
             if (logger.isDebugEnabled()) {
-                logger.debug("User properties retrieved: " + userPropertyValues);
+                logger.debug("Retrieved user store properties before type conversions: " + userStorePropertyValues);
             }
 
-            String whenCreatedAttributeValue = userPropertyValues.get("whenCreated");
-            String whenChangedAttributeValue = userPropertyValues.get("whenChanged");
+            Map<String, String> convertedTimestampAttributeValues = Arrays.stream(timestampAttributes)
+                    .filter(attribute -> userStorePropertyValues.get(attribute) != null)
+                    .collect(Collectors.toMap(Function.identity(),
+                            attribute -> convertDateFormatFromAD(userStorePropertyValues.get(attribute))));
 
-            if (whenCreatedAttributeValue != null) {
-                userPropertyValues.replace("whenCreated", convertDateFormatFromAD(whenCreatedAttributeValue));
+            if (logger.isDebugEnabled()) {
+                logger.debug("Converted timestamp attribute values: " + convertedTimestampAttributeValues);
             }
 
-            if (whenChangedAttributeValue != null) {
-                userPropertyValues.replace("whenChanged", convertDateFormatFromAD(whenChangedAttributeValue));
+            userStorePropertyValues.putAll(convertedTimestampAttributeValues);
+
+            if (logger.isDebugEnabled()) {
+                logger.debug("Retrieved user store properties after type conversions: " + userStorePropertyValues);
             }
         }
     }
 
     private String convertDateFormatFromAD(String fromDate) {
 
-        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern ("uuuuMMddHHmmss[,S][.S]X");
-        OffsetDateTime odt = OffsetDateTime.parse (fromDate , dateTimeFormatter);
-        Instant instant = odt.toInstant ();
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern (ACTIVE_DIRECTORY_DATE_TIME_FORMAT);
+        OffsetDateTime offsetDateTime = OffsetDateTime.parse (fromDate , dateTimeFormatter);
+        Instant instant = offsetDateTime.toInstant();
         return instant.toString();
     }
 
