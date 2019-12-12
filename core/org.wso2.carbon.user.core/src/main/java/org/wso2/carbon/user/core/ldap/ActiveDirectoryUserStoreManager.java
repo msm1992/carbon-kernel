@@ -959,6 +959,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
 
     @Override
     protected void processAttributesBeforeUpdate(Map<String, String> userStorePropertyValues) {
+
         String immutableAttributesProperty = Optional.ofNullable(realmConfig
                 .getUserStoreProperty(UserStoreConfigConstants.immutableAttributes)).orElse("");
 
