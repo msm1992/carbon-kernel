@@ -5246,8 +5246,10 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         }
 
         String[] properties = propertySet.toArray(new String[propertySet.size()]);
-        Map<String, String> uerProperties = this.getUserPropertyValues(userName, properties,
+        Map<String, String> userPropertyValues = this.getUserPropertyValues(userName, properties,
                 profileName);
+
+        processAttributesAfterRetrieval(userPropertyValues);
 
         List<String> getAgain = new ArrayList<String>();
         Map<String, String> finalValues = new HashMap<String, String>();
@@ -5276,7 +5278,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                     property = mapping.getMappedAttribute();
                 }
 
-                value = uerProperties.get(property);
+                value = userPropertyValues.get(property);
 
                 if (profileName.equals(UserCoreConstants.DEFAULT_PROFILE)) {
                     // Check whether we have a value for the requested attribute
@@ -5293,7 +5295,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                     property = this.realmConfig.getUserStoreProperty(LDAPConstants.DISPLAY_NAME_ATTRIBUTE);
                 }
 
-                value = uerProperties.get(property);
+                value = userPropertyValues.get(property);
                 if (value != null && value.trim().length() > 0) {
                     finalValues.put(claim, value);
                 }
@@ -5355,6 +5357,29 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
 
         return finalValues;
     }
+
+    /**
+     * Handles the processing of any special user store attribute values after retrieval.
+     *
+     * @param userStoreProperties un-processed map (userstore attribute name -> attribute value) of user store
+     *                            attribute values
+     */
+    protected void processAttributesAfterRetrieval(Map<String, String> userStoreProperties) {
+
+        // Not implemented.
+    }
+
+    /**
+     * Handles the processing of any special user store attribute values before update.
+     *
+     * @param userStoreProperties un-processed map (userstore attribute name -> attribute value) of user store
+     *                            attribute values
+     */
+    protected void processAttributesBeforeUpdate(Map<String, String> userStoreProperties) {
+
+        // Not implemented.
+    }
+
 
     /**
      * @return
@@ -6591,6 +6616,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         for (String userName : users) {
             Map<String, String> propertyValuesMap = getUserPropertyValues(userName, propertyNames, profileName);
             if (propertyValuesMap != null && !propertyValuesMap.isEmpty()) {
+                processAttributesAfterRetrieval(propertyValuesMap);
                 usersPropertyValuesMap.put(userName, propertyValuesMap);
             }
         }

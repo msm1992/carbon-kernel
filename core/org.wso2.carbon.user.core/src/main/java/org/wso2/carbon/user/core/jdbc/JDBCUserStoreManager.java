@@ -75,6 +75,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.stream.Collectors;
 import javax.sql.DataSource;
 
 import static org.wso2.carbon.user.core.constants.UserCoreErrorConstants.ErrorMessages.ERROR_CODE_DUPLICATE_WHILE_ADDING_A_USER;
@@ -2231,18 +2232,23 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
         try {
 
             ArrayList<String> propertyListToUpdate = new ArrayList<>();
-            Map<String, String> claimPropertyMap = new HashMap<>();
+            Map<String, String> claimAttributeMap = new HashMap<>();
+            Map<String, String> attributeValueMap = new HashMap<>();
             Iterator<Map.Entry<String, String>> ite = claims.entrySet().iterator();
 
             // Get the property names fo the claims
             while (ite.hasNext()) {
                 Map.Entry<String, String> entry = ite.next();
                 String claimURI = entry.getKey();
-
                 String property = getClaimAtrribute(claimURI, userName, null);
                 propertyListToUpdate.add(property);
-                claimPropertyMap.put(claimURI, property);
+                claimAttributeMap.put(claimURI, property);
+                attributeValueMap.put(property, entry.getValue());
             }
+            processAttributesBeforeUpdate(attributeValueMap);
+            claimAttributeMap = claimAttributeMap.entrySet().stream().filter(entry -> attributeValueMap
+                    .containsKey(entry.getValue()))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
             String[] propertyArr = new String[propertyListToUpdate.size()];
             propertyArr = propertyListToUpdate.toArray(propertyArr);
@@ -2257,7 +2263,7 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
             while (ite2.hasNext()) {
                 Map.Entry<String, String> entry = ite2.next();
                 String claimURI = entry.getKey();
-                String claimValue = claimPropertyMap.get(claimURI);
+                String claimValue = claimAttributeMap.get(claimURI);
                 if (claimValue != null && availableProperties.containsKey(claimValue)) {
                     String availableValue = availableProperties.get(claimValue);
                     if (availableValue != null && availableValue.equals(entry.getValue())) {
