@@ -87,7 +87,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
     private static final String RETRY_ATTEMPTS = "RetryAttempts";
     private static final String LDAPBinaryAttributesDescription = "Configure this to define the LDAP binary attributes " +
             "seperated by a space. Ex:mpegVideo mySpecialKey";
-    private static final String SCIM_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
+    private static final String WSO2_CLAIM_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
     private SimpleDateFormat scimDateFormat;
     private Calendar calendarForTimestampConversion;
 
@@ -1020,8 +1020,6 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
                 logger.debug("Retrieved user store properties before type conversions: " + userStorePropertyValues);
             }
 
-            Map<String, String> convertedTimestampAttributeValues = new HashMap<>();
-
             for (String timestampAttribute : timestampAttributes) {
                 String timestampAttributeValue = userStorePropertyValues.get(timestampAttribute);
 
@@ -1037,12 +1035,6 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
             }
 
             if (logger.isDebugEnabled()) {
-                logger.debug("Converted timestamp attribute values: " + convertedTimestampAttributeValues);
-            }
-
-            userStorePropertyValues.putAll(convertedTimestampAttributeValues);
-
-            if (logger.isDebugEnabled()) {
                 logger.debug("Retrieved user store properties after type conversions: " + userStorePropertyValues);
             }
         }
@@ -1051,17 +1043,26 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
     private String convertDateFormatFromAD(String fromDate) throws ParseException {
 
         if (fromDate == null) {
-            throw new ParseException("Generalized time is null.", 0);
+            throw new ParseException("Value provided for date conversion is null.", 0);
         }
 
         if (scimDateFormat == null) {
-            scimDateFormat = new SimpleDateFormat(SCIM_DATE_FORMAT);
+            scimDateFormat = new SimpleDateFormat(WSO2_CLAIM_DATE_TIME_FORMAT);
         }
 
         return scimDateFormat.format(parseGeneralizedTime(fromDate));
     }
 
-    private Date parseGeneralizedTime(String fromDate) throws ParseException {
+    /*
+     * Below code snippets were borrowed from Apache LDAP Directory API v2.0.0.
+     * As the required Date Time APIs for Active Directory Date format conversion are not available in Java 7.
+     * For code comments and further reference,
+     * {@See https://github.com/apache/directory-ldap-api/blob/2.0.0/util/src/main/java/
+     * org/apache/directory/api/util/GeneralizedTime.java}
+     *
+     * <code> - Begining snippet of the code borrowed from Apache LDAP API
+     */
+    private Date parseGeneralizedTime(String generalizedTime) throws ParseException {
 
         if (calendarForTimestampConversion == null) {
             calendarForTimestampConversion = new GregorianCalendar(TimeZone.getTimeZone("GMT"), Locale.ROOT);
@@ -1070,94 +1071,71 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
         calendarForTimestampConversion.setTimeInMillis(0);
         calendarForTimestampConversion.setLenient(false);
 
-        parseYear(fromDate);
-        parseMonth(fromDate);
-        parseDay(fromDate);
-        parseHour(fromDate);
+        parseYear(generalizedTime);
+        parseMonth(generalizedTime);
+        parseDay(generalizedTime);
+        parseHour(generalizedTime);
 
-        if (fromDate.length() < 11) {
+        if (generalizedTime.length() < 11) {
             throw new ParseException("Bad Generalized Time.", 10);
         }
 
-        // positionOfElement 10:
-        // if digit => minute field
-        // if . or , => fraction of hour field
-        // if Z or + or - => timezone field
-        // else error
         int positionOfElement = 10;
-        char charAtPositionOfElement = fromDate.charAt(positionOfElement);
+        char charAtPositionOfElement = generalizedTime.charAt(positionOfElement);
 
         if (('0' <= charAtPositionOfElement) && (charAtPositionOfElement <= '9')) {
-            parseMinute(fromDate);
+            parseMinute(generalizedTime);
 
-            if (fromDate.length() < 13) {
+            if (generalizedTime.length() < 13) {
                 throw new ParseException("Bad Generalized Time.", 12);
             }
 
-            // positionOfElement 12:
-            // if digit => second field
-            // if . or , => fraction of minute field
-            // if Z or + or - => timezone field
-            // else error
             positionOfElement = 12;
-            charAtPositionOfElement = fromDate.charAt(positionOfElement);
+            charAtPositionOfElement = generalizedTime.charAt(positionOfElement);
 
             if (('0' <= charAtPositionOfElement) && (charAtPositionOfElement <= '9')) {
-                parseSecond(fromDate);
+                parseSecond(generalizedTime);
 
-                if (fromDate.length() < 15) {
+                if (generalizedTime.length() < 15) {
                     throw new ParseException("Bad Generalized Time.", 14);
                 }
 
-                // positionOfElement 14:
-                // if . or , => fraction of second field
-                // if Z or + or - => timezone field
-                // else error
                 positionOfElement = 14;
-                charAtPositionOfElement = fromDate.charAt(positionOfElement);
+                charAtPositionOfElement = generalizedTime.charAt(positionOfElement);
 
                 if ((charAtPositionOfElement == '.') || (charAtPositionOfElement == ',')) {
-                    // read fraction of second
-                    parseFractionOfSecond(fromDate);
+                    parseFractionOfSecond(generalizedTime);
                     positionOfElement += 1;
-
-                    parseTimezone(fromDate, positionOfElement);
+                    parseTimezone(generalizedTime, positionOfElement);
                 } else if ((charAtPositionOfElement == 'Z') || (charAtPositionOfElement == '+')
                         || (charAtPositionOfElement == '-')) {
-                    // read timezone
-                    parseTimezone(fromDate, positionOfElement);
+                    parseTimezone(generalizedTime, positionOfElement);
                 } else {
                     throw new ParseException("Time is too short.", 14);
                 }
             } else if ((charAtPositionOfElement == '.') || (charAtPositionOfElement == ',')) {
-                // read fraction of minute
-                parseFractionOfMinute(fromDate);
+                parseFractionOfMinute(generalizedTime);
                 positionOfElement += 1;
 
-                parseTimezone(fromDate, positionOfElement);
+                parseTimezone(generalizedTime, positionOfElement);
             } else if ((charAtPositionOfElement == 'Z') || (charAtPositionOfElement == '+')
                     || (charAtPositionOfElement == '-')) {
-                // read timezone
-                parseTimezone(fromDate, positionOfElement);
+                parseTimezone(generalizedTime, positionOfElement);
             } else {
                 throw new ParseException("Time is too short.", 12);
             }
         } else if ((charAtPositionOfElement == '.') || (charAtPositionOfElement == ',')) {
-            // read fraction of hour
-            parseFractionOfHour(fromDate);
+            parseFractionOfHour(generalizedTime);
             positionOfElement += 1;
 
-            parseTimezone(fromDate, positionOfElement);
+            parseTimezone(generalizedTime, positionOfElement);
         } else if ((charAtPositionOfElement == 'Z') || (charAtPositionOfElement == '+')
                 || (charAtPositionOfElement == '-')) {
-            // read timezone
-            parseTimezone(fromDate, positionOfElement);
+            parseTimezone(generalizedTime, positionOfElement);
         } else {
             throw new ParseException("Invalid Generalized Time.", 10);
         }
 
-        // this calculates and verifies the calendar
-        /* Not sure we should do that... */
         try {
             calendarForTimestampConversion.getTimeInMillis();
         } catch (IllegalArgumentException iae) {
@@ -1168,25 +1146,25 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
         return calendarForTimestampConversion.getTime();
     }
 
-    private void parseTimezone(String fromDate, int positionOfElement) throws ParseException {
+    private void parseTimezone(String generalizedTime, int positionOfElement) throws ParseException {
 
-        if (fromDate.length() < positionOfElement + 1) {
+        if (generalizedTime.length() < positionOfElement + 1) {
             throw new ParseException("Time is too short, no 'timezone' element found.", positionOfElement);
         }
 
-        char charAtPositionOfElement = fromDate.charAt(positionOfElement);
+        char charAtPositionOfElement = generalizedTime.charAt(positionOfElement);
 
         if (charAtPositionOfElement == 'Z') {
             calendarForTimestampConversion.setTimeZone(TimeZone.getTimeZone("GMT"));
 
-            if (fromDate.length() > positionOfElement + 1) {
+            if (generalizedTime.length() > positionOfElement + 1) {
                 throw new ParseException("Time is too short, no 'timezone' element found.", positionOfElement + 1);
             }
         } else if ((charAtPositionOfElement == '+') || (charAtPositionOfElement == '-')) {
             StringBuilder stringBuilder = new StringBuilder("GMT");
             stringBuilder.append(charAtPositionOfElement);
 
-            String digits = getAllDigits(fromDate, positionOfElement + 1);
+            String digits = getAllDigits(generalizedTime, positionOfElement + 1);
             stringBuilder.append(digits);
 
             if (digits.length() == 2 && digits.matches("^([01]\\d|2[0-3])$")) {
@@ -1199,7 +1177,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
                 throw new ParseException("Value of 'timezone' must be 2 digits or 4 digits.", positionOfElement);
             }
 
-            if (fromDate.length() > positionOfElement + 1 + digits.length()) {
+            if (generalizedTime.length() > positionOfElement + 1 + digits.length()) {
                 throw new ParseException("Time is too short, no 'timezone' element found.",
                         positionOfElement + 1 + digits.length());
             }
@@ -1209,17 +1187,15 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
     private void parseFractionOfSecond(String fromDate) throws ParseException {
 
         String fraction = getFraction(fromDate, 14 + 1);
-
         double fractionDouble = Double.parseDouble("0." + fraction);
         int millisecond = (int) Math.floor(fractionDouble * 1000);
 
         calendarForTimestampConversion.set(GregorianCalendar.MILLISECOND, millisecond);
     }
 
-    private void parseFractionOfMinute(String fromDate) throws ParseException {
+    private void parseFractionOfMinute(String generalizedTime) throws ParseException {
 
-        String fraction = getFraction(fromDate, 12 + 1);
-
+        String fraction = getFraction(generalizedTime, 12 + 1);
         double fractionDouble = Double.parseDouble("0." + fraction);
         int milliseconds = (int) Math.round(fractionDouble * 1000 * 60);
         int second = milliseconds / 1000;
@@ -1229,10 +1205,9 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
         calendarForTimestampConversion.set(Calendar.MILLISECOND, millisecond);
     }
 
-    private void parseFractionOfHour(String fromDate) throws ParseException {
+    private void parseFractionOfHour(String generalizedTime) throws ParseException {
 
-        String fraction = getFraction(fromDate, 10 + 1);
-
+        String fraction = getFraction(generalizedTime, 10 + 1);
         double fractionDouble = Double.parseDouble("0." + fraction);
         int milliseconds = (int) Math.round(fractionDouble * 1000 * 60 * 60);
         int minute = milliseconds / (1000 * 60);
@@ -1244,11 +1219,11 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
         calendarForTimestampConversion.set(Calendar.MILLISECOND, millisecond);
     }
 
-    private String getAllDigits(String fromDate, int startIndex) {
+    private String getAllDigits(String generalizedTime, int startIndex) {
 
         StringBuilder stringBuilder = new StringBuilder();
-        while (fromDate.length() > startIndex) {
-            char charAtStartIndex = fromDate.charAt(startIndex);
+        while (generalizedTime.length() > startIndex) {
+            char charAtStartIndex = generalizedTime.charAt(startIndex);
             if ('0' <= charAtStartIndex && charAtStartIndex <= '9') {
                 stringBuilder.append(charAtStartIndex);
                 startIndex++;
@@ -1259,96 +1234,94 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
         return stringBuilder.toString();
     }
 
-    private void parseSecond(String fromDate) throws ParseException {
+    private void parseSecond(String generalizedTime) throws ParseException {
 
-        // read minute
-        if (fromDate.length() < 14) {
+        if (generalizedTime.length() < 14) {
             throw new ParseException("Time is too short, no 'second' element found.", 12);
         }
         try {
-            int second = Integer.parseInt(fromDate.substring(12, 14));
+            int second = Integer.parseInt(generalizedTime.substring(12, 14));
             calendarForTimestampConversion.set(Calendar.SECOND, second);
         } catch (NumberFormatException e) {
             throw new ParseException("Value of 'second' is not a number.", 12);
         }
     }
 
-    private void parseMinute(String fromDate) throws ParseException {
+    private void parseMinute(String generalizedTime) throws ParseException {
 
-        // read minute
-        if (fromDate.length() < 12) {
+        if (generalizedTime.length() < 12) {
             throw new ParseException("Time is too short, no 'minute' element found.", 10);
         }
         try {
-            int minute = Integer.parseInt(fromDate.substring(10, 12));
+            int minute = Integer.parseInt(generalizedTime.substring(10, 12));
             calendarForTimestampConversion.set(Calendar.MINUTE, minute);
         } catch (NumberFormatException e) {
             throw new ParseException("Value of 'minute' is not a number.", 10);
         }
     }
 
-    private void parseHour(String fromDate) throws ParseException {
+    private void parseHour(String generalizedTime) throws ParseException {
 
-        if (fromDate.length() < 10) {
+        if (generalizedTime.length() < 10) {
             throw new ParseException("Time is too short, no 'hour' element found.", 8);
         }
         try {
-            int hour = Integer.parseInt(fromDate.substring(8, 10));
+            int hour = Integer.parseInt(generalizedTime.substring(8, 10));
             calendarForTimestampConversion.set(Calendar.HOUR_OF_DAY, hour);
         } catch (NumberFormatException e) {
             throw new ParseException("Value of 'hour' is not a number.", 8);
         }
     }
 
-    private void parseDay(String fromDate) throws ParseException {
+    private void parseDay(String generalizedTime) throws ParseException {
 
-        if (fromDate.length() < 8) {
+        if (generalizedTime.length() < 8) {
             throw new ParseException("Time is too short, no 'day' element found.", 6);
         }
         try {
-            int day = Integer.parseInt(fromDate.substring(6, 8));
+            int day = Integer.parseInt(generalizedTime.substring(6, 8));
             calendarForTimestampConversion.set(Calendar.DAY_OF_MONTH, day);
         } catch (NumberFormatException e) {
             throw new ParseException("Value of 'day' is not a number.", 6);
         }
     }
 
-    private void parseMonth(String fromDate) throws ParseException {
+    private void parseMonth(String generalizedTime) throws ParseException {
 
-        if (fromDate.length() < 6) {
+        if (generalizedTime.length() < 6) {
             throw new ParseException("Time is too short, no 'month' element found.", 4);
         }
         try {
-            int month = Integer.parseInt(fromDate.substring(4, 6));
+            int month = Integer.parseInt(generalizedTime.substring(4, 6));
             calendarForTimestampConversion.set(Calendar.MONTH, month - 1);
         } catch (NumberFormatException e) {
             throw new ParseException("Value of 'month' is not a number.", 4);
         }
     }
 
-    private void parseYear(String fromDate) throws ParseException {
+    private void parseYear(String generalizedTime) throws ParseException {
 
-        if (fromDate.length() < 4) {
+        if (generalizedTime.length() < 4) {
             throw new ParseException("Time is too short, no 'year' element found.", 0);
         }
         try {
-            int year = Integer.parseInt(fromDate.substring(0, 4));
+            int year = Integer.parseInt(generalizedTime.substring(0, 4));
             calendarForTimestampConversion.set(Calendar.YEAR, year);
         } catch (NumberFormatException e) {
             throw new ParseException("Value of 'year' is not a number.", 0);
         }
     }
 
-    private String getFraction(String fromDate, int startIndex) throws ParseException {
+    private String getFraction(String generalizedTime, int startIndex) throws ParseException {
 
-        String fraction = getAllDigits(fromDate, startIndex);
+        String fraction = getAllDigits(generalizedTime, startIndex);
 
-        // minimum one digit
         if (fraction.length() == 0) {
             throw new ParseException("Time is too short, no 'fraction' element found.", startIndex);
         }
 
         return fraction;
     }
+    /* </code> - Ending snippet of the code borrowed from Apache LDAP API */
 
 }
