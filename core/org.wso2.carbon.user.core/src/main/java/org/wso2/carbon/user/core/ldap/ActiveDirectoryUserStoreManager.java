@@ -17,6 +17,8 @@
  */
 package org.wso2.carbon.user.core.ldap;
 
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
@@ -34,9 +36,18 @@ import org.wso2.carbon.utils.Secret;
 import org.wso2.carbon.utils.UnsupportedSecretTypeException;
 
 import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.StringTokenizer;
+import java.util.TimeZone;
 import javax.naming.Name;
 import javax.naming.NameParser;
 import javax.naming.NamingEnumeration;
@@ -76,6 +87,10 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
     private static final String RETRY_ATTEMPTS = "RetryAttempts";
     private static final String LDAPBinaryAttributesDescription = "Configure this to define the LDAP binary attributes " +
             "seperated by a space. Ex:mpegVideo mySpecialKey";
+    private static final String SCIM_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
+    private SimpleDateFormat scimDateFormat;
+    private Calendar calendarForTimestampConversion;
+
 
     // For AD's this value is 1500 by default, hence overriding the default value.
     protected static final int MEMBERSHIP_ATTRIBUTE_RANGE_VALUE = 1500;
@@ -221,6 +236,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
                                  String userName) throws UserStoreException {
         if (claims != null) {
             BasicAttribute claim;
+            Map<String, String> userStoreProperties = new HashMap<>();
 
             for (Map.Entry<String, String> entry : claims.entrySet()) {
                 // avoid attributes with empty values
@@ -236,6 +252,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
                 }
 
                 String attributeName = null;
+
                 try {
                     attributeName = getClaimAtrribute(claimURI, userName, null);
                 } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -243,11 +260,18 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
                     throw new UserStoreException(errorMessage, e);
                 }
 
-                claim = new BasicAttribute(attributeName);
-                claim.add(claims.get(entry.getKey()));
+                if (StringUtils.isNotEmpty(attributeName)) {
+                    userStoreProperties.put(attributeName, entry.getValue());
+                }
+            }
+
+            processAttributesBeforeUpdate(userStoreProperties);
+
+            for (Map.Entry<String, String> entry : userStoreProperties.entrySet()) {
+                claim = new BasicAttribute(entry.getKey());
+                claim.add(entry.getValue());
                 if (logger.isDebugEnabled()) {
-                    logger.debug("AttributeName: " + attributeName + " AttributeValue: " +
-                            claims.get(entry.getKey()));
+                    logger.debug("AttributeName: " + entry.getKey() + " AttributeValue: " + entry.getValue());
                 }
                 basicAttributes.put(claim);
             }
@@ -534,20 +558,22 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
 
         try {
             Attributes updatedAttributes = new BasicAttributes(true);
+            Map<String, String> userStoreProperties = new HashMap<>();
 
-            String domainName =
-                    userName.indexOf(UserCoreConstants.DOMAIN_SEPARATOR) > -1
-                            ? userName.split(UserCoreConstants.DOMAIN_SEPARATOR)[0]
-                            : realmConfig.getUserStoreProperty(UserStoreConfigConstants.DOMAIN_NAME);
             for (Map.Entry<String, String> claimEntry : claims.entrySet()) {
-                String claimURI = claimEntry.getKey();
+                userStoreProperties.put(getClaimAtrribute(claimEntry.getKey(), userName, null),
+                        claimEntry.getValue());
+            }
+
+            processAttributesBeforeUpdate(userStoreProperties);
+
+            for (Map.Entry<String, String> claimEntry : userStoreProperties.entrySet()) {
+                String attributeName = claimEntry.getKey();
                 // if there is no attribute for profile configuration in LDAP,
                 // skip updating it.
-                if (claimURI.equals(UserCoreConstants.PROFILE_CONFIGURATION)) {
+                if (attributeName.equals(UserCoreConstants.PROFILE_CONFIGURATION)) {
                     continue;
                 }
-                // get the claimMapping related to this claimURI
-                String attributeName = getClaimAtrribute(claimURI, userName, null);
                 //remove user DN from cache if changing username attribute
                 if (realmConfig.getUserStoreProperty(LDAPConstants.USER_NAME_ATTRIBUTE).equals
                         (attributeName)) {
@@ -920,6 +946,12 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
         setAdvancedProperty(UserStoreConfigConstants.enableMaxUserLimitForSCIM, UserStoreConfigConstants
                         .enableMaxUserLimitDisplayName, "false",
                 UserStoreConfigConstants.enableMaxUserLimitForSCIMDescription);
+        setAdvancedProperty(UserStoreConfigConstants.immutableAttributes,
+                UserStoreConfigConstants.immutableAttributesDisplayName, " ",
+                UserStoreConfigConstants.immutableAttributesDescription);
+        setAdvancedProperty(UserStoreConfigConstants.timestampAttributes,
+                UserStoreConfigConstants.timestampAttributesDisplayName, " ",
+                UserStoreConfigConstants.timestampAttributesDescription);
     }
 
 
@@ -928,6 +960,395 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
         Property property = new Property(name, value, displayName + "#" + description, null);
         ACTIVE_DIRECTORY_UM_ADVANCED_PROPERTIES.add(property);
 
+    }
+
+    @Override
+    protected void processAttributesBeforeUpdate(Map<String, String> userStorePropertyValues) {
+
+        String immutableAttributesProperty = realmConfig
+                .getUserStoreProperty(UserStoreConfigConstants.immutableAttributes);
+
+        if (immutableAttributesProperty == null) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("No immutable attributes found in Active Directory user store");
+            }
+            return;
+        }
+
+        String[] immutableAttributes = StringUtils.split(immutableAttributesProperty, ",");
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("Active Directory maintained immutable attributes: " + Arrays.toString(immutableAttributes));
+        }
+
+        if (ArrayUtils.isNotEmpty(immutableAttributes)) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Updated user store properties before attribute filtering: " + userStorePropertyValues);
+            }
+
+            for (String immutableAttribute : immutableAttributes) {
+                userStorePropertyValues.remove(immutableAttribute);
+            }
+
+            if (logger.isDebugEnabled()) {
+                logger.debug("Updated user store properties after attribute filtering: " + userStorePropertyValues);
+            }
+        }
+    }
+
+    @Override
+    protected void processAttributesAfterRetrieval(Map<String, String> userStorePropertyValues) {
+
+        String timestampAttributesProperty = realmConfig
+                .getUserStoreProperty(UserStoreConfigConstants.timestampAttributes);
+
+        if (timestampAttributesProperty == null) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("No timestamp attributes found in Active Directory user store.");
+            }
+            return;
+        }
+
+        String[] timestampAttributes = StringUtils.split(timestampAttributesProperty, ",");
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("Active Directory timestamp attributes: " + Arrays.toString(timestampAttributes));
+        }
+
+        if (ArrayUtils.isNotEmpty(timestampAttributes)) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Retrieved user store properties before type conversions: " + userStorePropertyValues);
+            }
+
+            Map<String, String> convertedTimestampAttributeValues = new HashMap<>();
+
+            for (String timestampAttribute : timestampAttributes) {
+                String timestampAttributeValue = userStorePropertyValues.get(timestampAttribute);
+
+                if (StringUtils.isNotEmpty(timestampAttributeValue)) {
+                    try {
+                        userStorePropertyValues.put(timestampAttribute,
+                                convertDateFormatFromAD(timestampAttributeValue));
+                    } catch (ParseException e) {
+                        logger.error("Error occurred while parsing Active Directory date format for the attribute: "
+                               + timestampAttribute + " and value: " + timestampAttributeValue, e);
+                    }
+                }
+            }
+
+            if (logger.isDebugEnabled()) {
+                logger.debug("Converted timestamp attribute values: " + convertedTimestampAttributeValues);
+            }
+
+            userStorePropertyValues.putAll(convertedTimestampAttributeValues);
+
+            if (logger.isDebugEnabled()) {
+                logger.debug("Retrieved user store properties after type conversions: " + userStorePropertyValues);
+            }
+        }
+    }
+
+    private String convertDateFormatFromAD(String fromDate) throws ParseException {
+
+        if (fromDate == null) {
+            throw new ParseException("Generalized time is null.", 0);
+        }
+
+        if (scimDateFormat == null) {
+            scimDateFormat = new SimpleDateFormat(SCIM_DATE_FORMAT);
+        }
+
+        return scimDateFormat.format(parseGeneralizedTime(fromDate));
+    }
+
+    private Date parseGeneralizedTime(String fromDate) throws ParseException {
+
+        if (calendarForTimestampConversion == null) {
+            calendarForTimestampConversion = new GregorianCalendar(TimeZone.getTimeZone("GMT"), Locale.ROOT);
+        }
+
+        calendarForTimestampConversion.setTimeInMillis(0);
+        calendarForTimestampConversion.setLenient(false);
+
+        parseYear(fromDate);
+        parseMonth(fromDate);
+        parseDay(fromDate);
+        parseHour(fromDate);
+
+        if (fromDate.length() < 11) {
+            throw new ParseException("Bad Generalized Time.", 10);
+        }
+
+        // positionOfElement 10:
+        // if digit => minute field
+        // if . or , => fraction of hour field
+        // if Z or + or - => timezone field
+        // else error
+        int positionOfElement = 10;
+        char charAtPositionOfElement = fromDate.charAt(positionOfElement);
+
+        if (('0' <= charAtPositionOfElement) && (charAtPositionOfElement <= '9')) {
+            parseMinute(fromDate);
+
+            if (fromDate.length() < 13) {
+                throw new ParseException("Bad Generalized Time.", 12);
+            }
+
+            // positionOfElement 12:
+            // if digit => second field
+            // if . or , => fraction of minute field
+            // if Z or + or - => timezone field
+            // else error
+            positionOfElement = 12;
+            charAtPositionOfElement = fromDate.charAt(positionOfElement);
+
+            if (('0' <= charAtPositionOfElement) && (charAtPositionOfElement <= '9')) {
+                parseSecond(fromDate);
+
+                if (fromDate.length() < 15) {
+                    throw new ParseException("Bad Generalized Time.", 14);
+                }
+
+                // positionOfElement 14:
+                // if . or , => fraction of second field
+                // if Z or + or - => timezone field
+                // else error
+                positionOfElement = 14;
+                charAtPositionOfElement = fromDate.charAt(positionOfElement);
+
+                if ((charAtPositionOfElement == '.') || (charAtPositionOfElement == ',')) {
+                    // read fraction of second
+                    parseFractionOfSecond(fromDate);
+                    positionOfElement += 1;
+
+                    parseTimezone(fromDate, positionOfElement);
+                } else if ((charAtPositionOfElement == 'Z') || (charAtPositionOfElement == '+')
+                        || (charAtPositionOfElement == '-')) {
+                    // read timezone
+                    parseTimezone(fromDate, positionOfElement);
+                } else {
+                    throw new ParseException("Time is too short.", 14);
+                }
+            } else if ((charAtPositionOfElement == '.') || (charAtPositionOfElement == ',')) {
+                // read fraction of minute
+                parseFractionOfMinute(fromDate);
+                positionOfElement += 1;
+
+                parseTimezone(fromDate, positionOfElement);
+            } else if ((charAtPositionOfElement == 'Z') || (charAtPositionOfElement == '+')
+                    || (charAtPositionOfElement == '-')) {
+                // read timezone
+                parseTimezone(fromDate, positionOfElement);
+            } else {
+                throw new ParseException("Time is too short.", 12);
+            }
+        } else if ((charAtPositionOfElement == '.') || (charAtPositionOfElement == ',')) {
+            // read fraction of hour
+            parseFractionOfHour(fromDate);
+            positionOfElement += 1;
+
+            parseTimezone(fromDate, positionOfElement);
+        } else if ((charAtPositionOfElement == 'Z') || (charAtPositionOfElement == '+')
+                || (charAtPositionOfElement == '-')) {
+            // read timezone
+            parseTimezone(fromDate, positionOfElement);
+        } else {
+            throw new ParseException("Invalid Generalized Time.", 10);
+        }
+
+        // this calculates and verifies the calendar
+        /* Not sure we should do that... */
+        try {
+            calendarForTimestampConversion.getTimeInMillis();
+        } catch (IllegalArgumentException iae) {
+            throw new ParseException("Invalid date time.", 0);
+        }
+
+        calendarForTimestampConversion.setLenient(true);
+        return calendarForTimestampConversion.getTime();
+    }
+
+    private void parseTimezone(String fromDate, int positionOfElement) throws ParseException {
+
+        if (fromDate.length() < positionOfElement + 1) {
+            throw new ParseException("Time is too short, no 'timezone' element found.", positionOfElement);
+        }
+
+        char charAtPositionOfElement = fromDate.charAt(positionOfElement);
+
+        if (charAtPositionOfElement == 'Z') {
+            calendarForTimestampConversion.setTimeZone(TimeZone.getTimeZone("GMT"));
+
+            if (fromDate.length() > positionOfElement + 1) {
+                throw new ParseException("Time is too short, no 'timezone' element found.", positionOfElement + 1);
+            }
+        } else if ((charAtPositionOfElement == '+') || (charAtPositionOfElement == '-')) {
+            StringBuilder stringBuilder = new StringBuilder("GMT");
+            stringBuilder.append(charAtPositionOfElement);
+
+            String digits = getAllDigits(fromDate, positionOfElement + 1);
+            stringBuilder.append(digits);
+
+            if (digits.length() == 2 && digits.matches("^([01]\\d|2[0-3])$")) {
+                TimeZone timeZone = TimeZone.getTimeZone(stringBuilder.toString());
+                calendarForTimestampConversion.setTimeZone(timeZone);
+            } else if (digits.length() == 4 && digits.matches("^([01]\\d|2[0-3])([0-5]\\d)$")) {
+                TimeZone timeZone = TimeZone.getTimeZone(stringBuilder.toString());
+                calendarForTimestampConversion.setTimeZone(timeZone);
+            } else {
+                throw new ParseException("Value of 'timezone' must be 2 digits or 4 digits.", positionOfElement);
+            }
+
+            if (fromDate.length() > positionOfElement + 1 + digits.length()) {
+                throw new ParseException("Time is too short, no 'timezone' element found.",
+                        positionOfElement + 1 + digits.length());
+            }
+        }
+    }
+
+    private void parseFractionOfSecond(String fromDate) throws ParseException {
+
+        String fraction = getFraction(fromDate, 14 + 1);
+
+        double fractionDouble = Double.parseDouble("0." + fraction);
+        int millisecond = (int) Math.floor(fractionDouble * 1000);
+
+        calendarForTimestampConversion.set(GregorianCalendar.MILLISECOND, millisecond);
+    }
+
+    private void parseFractionOfMinute(String fromDate) throws ParseException {
+
+        String fraction = getFraction(fromDate, 12 + 1);
+
+        double fractionDouble = Double.parseDouble("0." + fraction);
+        int milliseconds = (int) Math.round(fractionDouble * 1000 * 60);
+        int second = milliseconds / 1000;
+        int millisecond = milliseconds - (second * 1000);
+
+        calendarForTimestampConversion.set(Calendar.SECOND, second);
+        calendarForTimestampConversion.set(Calendar.MILLISECOND, millisecond);
+    }
+
+    private void parseFractionOfHour(String fromDate) throws ParseException {
+
+        String fraction = getFraction(fromDate, 10 + 1);
+
+        double fractionDouble = Double.parseDouble("0." + fraction);
+        int milliseconds = (int) Math.round(fractionDouble * 1000 * 60 * 60);
+        int minute = milliseconds / (1000 * 60);
+        int second = (milliseconds - (minute * 60 * 1000)) / 1000;
+        int millisecond = milliseconds - (minute * 60 * 1000) - (second * 1000);
+
+        calendarForTimestampConversion.set(Calendar.MINUTE, minute);
+        calendarForTimestampConversion.set(Calendar.SECOND, second);
+        calendarForTimestampConversion.set(Calendar.MILLISECOND, millisecond);
+    }
+
+    private String getAllDigits(String fromDate, int startIndex) {
+
+        StringBuilder stringBuilder = new StringBuilder();
+        while (fromDate.length() > startIndex) {
+            char charAtStartIndex = fromDate.charAt(startIndex);
+            if ('0' <= charAtStartIndex && charAtStartIndex <= '9') {
+                stringBuilder.append(charAtStartIndex);
+                startIndex++;
+            } else {
+                break;
+            }
+        }
+        return stringBuilder.toString();
+    }
+
+    private void parseSecond(String fromDate) throws ParseException {
+
+        // read minute
+        if (fromDate.length() < 14) {
+            throw new ParseException("Time is too short, no 'second' element found.", 12);
+        }
+        try {
+            int second = Integer.parseInt(fromDate.substring(12, 14));
+            calendarForTimestampConversion.set(Calendar.SECOND, second);
+        } catch (NumberFormatException e) {
+            throw new ParseException("Value of 'second' is not a number.", 12);
+        }
+    }
+
+    private void parseMinute(String fromDate) throws ParseException {
+
+        // read minute
+        if (fromDate.length() < 12) {
+            throw new ParseException("Time is too short, no 'minute' element found.", 10);
+        }
+        try {
+            int minute = Integer.parseInt(fromDate.substring(10, 12));
+            calendarForTimestampConversion.set(Calendar.MINUTE, minute);
+        } catch (NumberFormatException e) {
+            throw new ParseException("Value of 'minute' is not a number.", 10);
+        }
+    }
+
+    private void parseHour(String fromDate) throws ParseException {
+
+        if (fromDate.length() < 10) {
+            throw new ParseException("Time is too short, no 'hour' element found.", 8);
+        }
+        try {
+            int hour = Integer.parseInt(fromDate.substring(8, 10));
+            calendarForTimestampConversion.set(Calendar.HOUR_OF_DAY, hour);
+        } catch (NumberFormatException e) {
+            throw new ParseException("Value of 'hour' is not a number.", 8);
+        }
+    }
+
+    private void parseDay(String fromDate) throws ParseException {
+
+        if (fromDate.length() < 8) {
+            throw new ParseException("Time is too short, no 'day' element found.", 6);
+        }
+        try {
+            int day = Integer.parseInt(fromDate.substring(6, 8));
+            calendarForTimestampConversion.set(Calendar.DAY_OF_MONTH, day);
+        } catch (NumberFormatException e) {
+            throw new ParseException("Value of 'day' is not a number.", 6);
+        }
+    }
+
+    private void parseMonth(String fromDate) throws ParseException {
+
+        if (fromDate.length() < 6) {
+            throw new ParseException("Time is too short, no 'month' element found.", 4);
+        }
+        try {
+            int month = Integer.parseInt(fromDate.substring(4, 6));
+            calendarForTimestampConversion.set(Calendar.MONTH, month - 1);
+        } catch (NumberFormatException e) {
+            throw new ParseException("Value of 'month' is not a number.", 4);
+        }
+    }
+
+    private void parseYear(String fromDate) throws ParseException {
+
+        if (fromDate.length() < 4) {
+            throw new ParseException("Time is too short, no 'year' element found.", 0);
+        }
+        try {
+            int year = Integer.parseInt(fromDate.substring(0, 4));
+            calendarForTimestampConversion.set(Calendar.YEAR, year);
+        } catch (NumberFormatException e) {
+            throw new ParseException("Value of 'year' is not a number.", 0);
+        }
+    }
+
+    private String getFraction(String fromDate, int startIndex) throws ParseException {
+
+        String fraction = getAllDigits(fromDate, startIndex);
+
+        // minimum one digit
+        if (fraction.length() == 0) {
+            throw new ParseException("Time is too short, no 'fraction' element found.", startIndex);
+        }
+
+        return fraction;
     }
 
 }
