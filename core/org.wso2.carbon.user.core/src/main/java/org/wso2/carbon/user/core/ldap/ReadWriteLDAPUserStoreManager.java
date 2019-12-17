@@ -884,16 +884,16 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
         }
         try {
             Attributes updatedAttributes = new BasicAttributes(true);
-            Map<String, String> userStoreProperties = new HashMap<>();
+            Map<String, String> attributeValueMap = new HashMap<>();
 
             for (Map.Entry<String, String> claimEntry : claims.entrySet()) {
-                userStoreProperties.put(getClaimAtrribute(claimEntry.getKey(), userName, null),
+                attributeValueMap.put(getClaimAtrribute(claimEntry.getKey(), userName, null),
                         claimEntry.getValue());
             }
 
-            processAttributesBeforeUpdate(userStoreProperties);
+            processAttributesBeforeUpdate(attributeValueMap);
 
-            for (Map.Entry<String, String> claimEntry : claims.entrySet()) {
+            for (Map.Entry<String, String> claimEntry : attributeValueMap.entrySet()) {
                 String attributeName = claimEntry.getKey();
                 // if there is no attribute for profile configuration in LDAP,
                 // skip updating it.
