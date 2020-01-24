@@ -44,7 +44,7 @@ public class CachingAxisConfigurationObserver implements Axis2ConfigurationConte
     /**
      * In this method, we stop & remove all caches belonging to this tenant
      * Issue: if the tenant is active on other nodes, those also may get removed?
-     * Remove only local caches on order to deal with issues that can arise when the cache in distributed
+     * Remove only local caches in order to deal with issues that can arise when the cache is distributed
      *
      * @param configurationContext to Get the required information related to tenant
      */
