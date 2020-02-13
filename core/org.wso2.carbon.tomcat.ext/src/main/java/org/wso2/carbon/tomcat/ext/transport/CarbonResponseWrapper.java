@@ -52,7 +52,7 @@ public class CarbonResponseWrapper extends Response {
     }
 
     @Override
-    public StringBuffer generateCookieString(Cookie cookie) {
+    public StringBuffer generateCookieString(final Cookie cookie) {
         final StringBuffer cookieBuffer = new StringBuffer();
         if (SecurityUtil.isPackageProtectionEnabled()) {
             AccessController.doPrivileged(new PrivilegedAction<Void>() {
