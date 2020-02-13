@@ -79,12 +79,12 @@ public class CarbonResponseWrapper extends Response {
             ServerCookie.appendCookieValue(sb, cookie.getVersion(), cookie.getName(), cookie.getValue(),
                     cookie.getPath(), cookie.getDomain(), cookie.getComment(), cookie.getMaxAge(), cookie.getSecure(),
                     cookie.isHttpOnly());
-            sb.append("; SameSite=").append(((ServletCookie) cookie).getSameSite().toPrintable());
+            sb.append("; SameSite=").append(((ServletCookie) cookie).getSameSite().getName());
         } else {
             ServerCookie.appendCookieValue(sb, cookie.getVersion(), cookie.getName(), cookie.getValue(),
                     cookie.getPath(), cookie.getDomain(), cookie.getComment(), cookie.getMaxAge(), cookie.getSecure(),
                     cookie.isHttpOnly());
-            sb.append("; SameSite=").append(SameSiteCookie.STRICT.toPrintable());
+            sb.append("; SameSite=").append(SameSiteCookie.STRICT.getName());
         }
     }
 
