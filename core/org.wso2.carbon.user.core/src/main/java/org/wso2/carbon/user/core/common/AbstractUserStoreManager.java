@@ -92,6 +92,8 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
 
     protected static final String TRUE_VALUE = "true";
     protected static final String FALSE_VALUE = "false";
+    protected static final String QUERY_FILTER_STRING_ANY = "*";
+    protected static final int QUERY_MAX_ITEM_LIMIT_ANY = -1;
     private static final String MAX_LIST_LENGTH = "100";
     private static final int MAX_ITEM_LIMIT_UNLIMITED = -1;
     private static final String MULIPLE_ATTRIBUTE_ENABLE = "MultipleAttributeEnable";
@@ -4196,6 +4198,26 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
             return (String[]) object;
         }
 
+        return getUserListOfRole(roleName, QUERY_FILTER_STRING_ANY, QUERY_MAX_ITEM_LIMIT_ANY);
+    }
+
+    /**
+     * Retrieves a list of user names belongs to the given role and matches the given string filter.
+     *
+     * @param roleName Name of the role.
+     * @param filter The string to filter out names of users belong to the given role.
+     * @param maxItemLimit Maximum number of users returned.
+     * @return User name list.
+     * @throws UserStoreException
+     */
+    public final String[] getUserListOfRole(String roleName, String filter, int maxItemLimit) throws UserStoreException {
+
+        if (!isSecureCall.get()) {
+            Class argTypes[] = new Class[]{String.class, String.class, int.class};
+            Object object = callSecure("getUserListOfRole", new Object[]{roleName, filter, maxItemLimit}, argTypes);
+            return (String[]) object;
+        }
+
         String[] userNames = new String[0];
 
         // If role does not exit, just return
@@ -4207,7 +4229,13 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         UserStore userStore = getUserStore(roleName);
 
         if (userStore.isRecurssive()) {
-            return userStore.getUserStoreManager().getUserListOfRole(userStore.getDomainFreeName());
+            UserStoreManager resolvedUserStoreManager = userStore.getUserStoreManager();
+            if (resolvedUserStoreManager instanceof AbstractUserStoreManager) {
+                return ((AbstractUserStoreManager) resolvedUserStoreManager)
+                        .getUserListOfRole(userStore.getDomainFreeName(), filter, maxItemLimit);
+            } else {
+                return resolvedUserStoreManager.getUserListOfRole(userStore.getDomainFreeName());
+            }
         }
 
 
@@ -4272,7 +4300,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         }
 
         if (readGroupsEnabled) {
-            userNames = doGetUserListOfRole(roleName, "*");
+            userNames = doGetUserListOfRole(roleName, filter, maxItemLimit);
             handleDoPostGetUserListOfRole(roleName, userNames);
         }
 
@@ -5218,8 +5246,10 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         }
 
         String[] properties = propertySet.toArray(new String[propertySet.size()]);
-        Map<String, String> uerProperties = this.getUserPropertyValues(userName, properties,
+        Map<String, String> userPropertyValues = this.getUserPropertyValues(userName, properties,
                 profileName);
+
+        processAttributesAfterRetrieval(userPropertyValues);
 
         List<String> getAgain = new ArrayList<String>();
         Map<String, String> finalValues = new HashMap<String, String>();
@@ -5248,7 +5278,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                     property = mapping.getMappedAttribute();
                 }
 
-                value = uerProperties.get(property);
+                value = userPropertyValues.get(property);
 
                 if (profileName.equals(UserCoreConstants.DEFAULT_PROFILE)) {
                     // Check whether we have a value for the requested attribute
@@ -5265,7 +5295,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                     property = this.realmConfig.getUserStoreProperty(LDAPConstants.DISPLAY_NAME_ATTRIBUTE);
                 }
 
-                value = uerProperties.get(property);
+                value = userPropertyValues.get(property);
                 if (value != null && value.trim().length() > 0) {
                     finalValues.put(claim, value);
                 }
@@ -5326,6 +5356,28 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         }
 
         return finalValues;
+    }
+
+    /**
+     * Handles the processing of any special user store attribute values after retrieval.
+     *
+     * @param userStoreProperties un-processed map (userstore attribute name -> attribute value) of user store
+     *                            attribute values
+     */
+    protected void processAttributesAfterRetrieval(Map<String, String> userStoreProperties) {
+
+        // Not implemented.
+    }
+
+    /**
+     * Handles the processing of any special user store attribute values before update.
+     *
+     * @param userStoreProperties un-processed map (userstore attribute name -> attribute value) of user store
+     *                            attribute values
+     */
+    protected void processAttributesBeforeUpdate(Map<String, String> userStoreProperties) {
+
+        // Not implemented.
     }
 
     /**
@@ -5505,7 +5557,8 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
     protected void addToUserRolesCache(int tenantID, String userName, String[] roleList) {
         if (userRolesCache != null) {
             String usernameWithDomain = UserCoreUtil.addDomainToName(userName, getMyDomainName());
-            userRolesCache.addToCache(cacheIdentifier, tenantID, usernameWithDomain, roleList);
+            String[] rolesWithDomain = UserCoreUtil.addDomainToNames(roleList, getMyDomainName());
+            userRolesCache.addToCache(cacheIdentifier, tenantID, usernameWithDomain, rolesWithDomain);
             AuthorizationCache authorizationCache = AuthorizationCache.getInstance();
             authorizationCache.clearCacheByTenant(tenantID);
         }
@@ -5672,6 +5725,27 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
             throws UserStoreException;
 
     /**
+     * Return the list of users belong to the given role for the given filter and max item limit.
+     *
+     * @param roleName Name of the role.
+     * @param filter String filter value.
+     * @param maxItemLimit Maximum number of users in the returned array. A negative value return all users and zero
+     *                     returns zero users.
+     * @return An array of users.
+     * @throws UserStoreException
+     */
+    protected String[] doGetUserListOfRole(String roleName, String filter, int maxItemLimit)
+            throws UserStoreException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Using the default implementation of retrieving users in the role: " + roleName + " only with " +
+                    "the filter: " + filter + ". The provided value: " + maxItemLimit + " for the maximum limit " +
+                    "of returning users is ignored");
+        }
+        return doGetUserListOfRole(roleName, filter);
+    }
+
+    /**
      * @param userName
      * @param filter
      * @return
@@ -5691,16 +5765,40 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
             return roleList;
         }
 
-        String[] internalRoles = doGetInternalRoleListOfUser(userName, filter);
+        return getUserRoles(userName, filter);
+    }
 
+    /**
+     * Retrieve the list of users directly from the database,
+     * without using the cache.
+     * @param username username of the user
+     * @param filter filter to be used when searching for roles
+     * @return the list of roles which the specified users belongs to
+     * @throws UserStoreException
+     */
+    public final String[] getRoleListOfUserFromDatabase(String username, String filter)
+            throws UserStoreException {
+
+        if (!isSecureCall.get()) {
+            Class argTypes[] = new Class[]{String.class, String.class};
+            Object object = callSecure("getRoleListOfUserFromDatabase", new Object[]{username, filter}, argTypes);
+            return (String[]) object;
+        }
+
+        return getUserRoles(username, filter);
+    }
+
+    private String[] getUserRoles(String username, String filter) throws UserStoreException {
+
+        String[] internalRoles = doGetInternalRoleListOfUser(username, filter);
         String[] modifiedExternalRoleList = new String[0];
 
-        if (readGroupsEnabled && doCheckExistingUser(userName)) {
+        if (readGroupsEnabled && doCheckExistingUser(username)) {
             List<String> roles = new ArrayList<String>();
-            String[] externalRoles = doGetExternalRoleListOfUser(userName, "*");
+            String[] externalRoles = doGetExternalRoleListOfUser(username, "*");
             roles.addAll(Arrays.asList(externalRoles));
             if (isSharedGroupEnabled()) {
-                String[] sharedRoles = doGetSharedRoleListOfUser(userName, null, "*");
+                String[] sharedRoles = doGetSharedRoleListOfUser(username, null, "*");
                 if (sharedRoles != null) {
                     roles.addAll(Arrays.asList(sharedRoles));
                 }
@@ -5710,19 +5808,19 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                             getMyDomainName());
         }
 
-        roleList = UserCoreUtil.combine(internalRoles, Arrays.asList(modifiedExternalRoleList));
+        String[] roleList = UserCoreUtil.combine(internalRoles, Arrays.asList(modifiedExternalRoleList));
 
         for (UserOperationEventListener userOperationEventListener : UMListenerServiceComponent
                 .getUserOperationEventListeners()) {
             if (userOperationEventListener instanceof AbstractUserOperationEventListener) {
                 if (!((AbstractUserOperationEventListener) userOperationEventListener)
-                        .doPostGetRoleListOfUser(userName, filter, roleList, this)) {
+                        .doPostGetRoleListOfUser(username, filter, roleList, this)) {
                     break;
                 }
             }
         }
-        addToUserRolesCache(this.tenantId, userName, roleList);
 
+        addToUserRolesCache(this.tenantId, username, roleList);
         return roleList;
     }
 
@@ -6517,6 +6615,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         for (String userName : users) {
             Map<String, String> propertyValuesMap = getUserPropertyValues(userName, propertyNames, profileName);
             if (propertyValuesMap != null && !propertyValuesMap.isEmpty()) {
+                processAttributesAfterRetrieval(propertyValuesMap);
                 usersPropertyValuesMap.put(userName, propertyValuesMap);
             }
         }

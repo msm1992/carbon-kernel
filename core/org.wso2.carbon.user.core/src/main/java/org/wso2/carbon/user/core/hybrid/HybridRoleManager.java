@@ -420,7 +420,7 @@ public class HybridRoleManager {
                 roles = DatabaseUtil
                         .getStringValuesFromDatabase(dbConnection, sqlStmt, UserCoreUtil.removeDomainFromName(userName),
                                 tenantId, tenantId, tenantId, domain);
-            } else {
+            } else if (filter.contains("*") || filter.contains("?")) {
                 filter = filter.trim();
                 filter = filter.replace("*", "%");
                 filter = filter.replace("?", "_");
@@ -429,12 +429,17 @@ public class HybridRoleManager {
                         HybridJDBCConstants.GET_ROLE_OF_USER_SQL,
                         JDBCCaseInsensitiveConstants.GET_IS_USER_ROLE_SQL_CASE_INSENSITIVE);
 
-                if (filter.toLowerCase().contains(UserCoreConstants.INTERNAL_DOMAIN.toLowerCase())) {
-                    int index;
-                    if ((index = filter.indexOf(CarbonConstants.DOMAIN_SEPARATOR)) >= 0) {
-                        filter = filter.substring(index + 1);
-                    }
-                }
+                filter = truncateInternalDomainFromFilter(filter);
+                roles = DatabaseUtil
+                        .getStringValuesFromDatabase(dbConnection, sqlStmt, UserCoreUtil.removeDomainFromName(userName),
+                                tenantId, tenantId, tenantId, domain, filter);
+            } else {
+                sqlStmt = getHybridRoleListSqlStatement(
+                        realmConfig.getRealmProperty(HybridJDBCConstants.GET_IS_ROLE_EXIST_LIST_OF_USER),
+                        HybridJDBCConstants.GET_USER_ROLE_NAME_SQL,
+                        JDBCCaseInsensitiveConstants.GET_IS_USER_ROLE_SQL_CASE_INSENSITIVE);
+
+                filter = truncateInternalDomainFromFilter(filter);
                 roles = DatabaseUtil
                         .getStringValuesFromDatabase(dbConnection, sqlStmt, UserCoreUtil.removeDomainFromName(userName),
                                 tenantId, tenantId, tenantId, domain, filter);
@@ -475,6 +480,26 @@ public class HybridRoleManager {
     }
 
     /**
+     * If the filter contains the internal domain, then here we remove the internal domain from the filter
+     * as the database only has the role name without the internal domain.
+     * @param filter raw filter
+     * @return truncated filter without the internal domain
+     */
+    private String truncateInternalDomainFromFilter(String filter) {
+
+        String filterLowerCased = filter.toLowerCase();
+
+        if (filterLowerCased.contains(UserCoreConstants.INTERNAL_DOMAIN.toLowerCase())
+                && filterLowerCased.indexOf(UserCoreConstants.INTERNAL_DOMAIN.toLowerCase()) == 0) {
+            int index;
+            if ((index = filter.indexOf(CarbonConstants.DOMAIN_SEPARATOR)) >= 0) {
+                filter = filter.substring(index + 1);
+            }
+        }
+        return filter;
+    }
+
+    /**
      * Get hybrid role list of users
      *
      * @param userNames user name list
@@ -493,6 +518,7 @@ public class HybridRoleManager {
             }
             for (int i = 0; i < userNames.size(); i++) {
 
+                userNames.set(i, userNames.get(i).replaceAll("'", "''"));
                 usernameParameter.append("'").append(userNames.get(i)).append("'");
 
                 if (i != userNames.size() - 1) {
@@ -505,6 +531,7 @@ public class HybridRoleManager {
             }
             for (int i = 0; i < userNames.size(); i++) {
 
+                userNames.set(i, userNames.get(i).replaceAll("'", "''"));
                 usernameParameter.append("LOWER('").append(userNames.get(i)).append("')");
 
                 if (i != userNames.size() - 1) {

@@ -46,6 +46,8 @@ public class UserCoreConstants {
 
     public static final String UM_TENANT_COLUMN = "UM_TENANT_ID";
 
+    public static final String SQL_ESCAPE_KEYWORD = "ESCAPE";
+
     public static final String SYSTEM_RESOURCE = "System";
     public static final String MSSQL_TYPE = "mssql";
     public static final String MYSQL_TYPE = "mysql";
@@ -149,6 +151,7 @@ public class UserCoreConstants {
         public static final String PROPERTY_MAX_USER_LIST = "MaxUserNameListLength";
         public static final String PROPERTY_MAX_ROLE_LIST = "MaxRoleNameListLength";
         public static final String PROPERTY_MAX_SEARCH_TIME = "MaxSearchQueryTime";
+        public static final String PROPERTY_MAX_USER_LIST_FOR_SCIM = "EnableMaxUserLimitForSCIM";
 
         public static final String READ_GROUPS_ENABLED = "ReadGroups";
 

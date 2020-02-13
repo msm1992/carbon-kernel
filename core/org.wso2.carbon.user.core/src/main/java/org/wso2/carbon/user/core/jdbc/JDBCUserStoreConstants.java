@@ -197,9 +197,14 @@ public class JDBCUserStoreConstants {
                 "UM_ROLE_NAME LIKE ? AND UM_TENANT_ID=? AND UM_SHARED_ROLE ='0' ORDER BY UM_ROLE_NAME", "");
         setAdvancedProperty(JDBCRealmConstants.GET_SHARED_ROLE_LIST, "Get Shared Role List SQP", JDBCRealmConstants.GET_SHARED_ROLE_LIST_SQL, "");
         setAdvancedProperty(JDBCRealmConstants.GET_USER_FILTER, "User Filter SQL", JDBCRealmConstants.GET_USER_FILTER_SQL, "");
+        setAdvancedProperty(JDBCRealmConstants.GET_USER_FILTER_WITH_ESCAPE, "User Filter SQL With Escape",
+                JDBCRealmConstants.GET_USER_FILTER_SQL_WITH_ESCAPE, "");
         setAdvancedProperty(JDBCCaseInsensitiveConstants.GET_USER_FILTER_CASE_INSENSITIVE, "User Filter SQL With" +
                         " Case Insensitive Username", JDBCCaseInsensitiveConstants.GET_USER_FILTER_SQL_CASE_INSENSITIVE,
                 "");
+        setAdvancedProperty(JDBCCaseInsensitiveConstants.GET_USER_FILTER_CASE_INSENSITIVE_WITH_ESCAPE,
+                "User Filter " + "SQL With Case Insensitive Username With Escape",
+                JDBCCaseInsensitiveConstants.GET_USER_FILTER_SQL_CASE_INSENSITIVE_WITH_ESCAPE, "");
         setAdvancedProperty(JDBCRealmConstants.GET_USER_ROLE, "User Role SQL", JDBCRealmConstants.GET_USER_ROLE_SQL, "");
         setAdvancedProperty(JDBCRealmConstants.GET_IS_USER_ROLE_EXIST, "User Role Exist SQL",
                 JDBCRealmConstants.GET_IS_USER_ROLE_EXIST_SQL, "");
@@ -216,7 +221,11 @@ public class JDBCUserStoreConstants {
 
         setAdvancedProperty(JDBCRealmConstants.GET_IS_ROLE_EXISTING, "Is Role Existing SQL", JDBCRealmConstants.GET_IS_ROLE_EXISTING_SQL, "");
         setAdvancedProperty(JDBCRealmConstants.GET_USERS_IN_ROLE, "Get User List Of Role SQL", JDBCRealmConstants.GET_USERS_IN_ROLE_SQL, "");
+        setAdvancedProperty(JDBCRealmConstants.GET_USERS_IN_ROLE_FILTER, "Get User List Of Role Filter SQL",
+                JDBCRealmConstants.GET_USERS_IN_ROLE_FILTER_SQL, "");
         setAdvancedProperty(JDBCRealmConstants.GET_USERS_IN_SHARED_ROLE, "Get User List Of Shared Role SQL", JDBCRealmConstants.GET_USERS_IN_SHARED_ROLE_SQL, "");
+        setAdvancedProperty(JDBCRealmConstants.GET_USERS_IN_SHARED_ROLE_FILTER, "Get User List Of Shared Role " +
+                        "Filter SQL", JDBCRealmConstants.GET_USERS_IN_SHARED_ROLE_FILTER_SQL, "");
 
         setAdvancedProperty(JDBCRealmConstants.GET_IS_USER_EXISTING, "Is User Existing SQL", JDBCRealmConstants.GET_IS_USER_EXISTING_SQL, "");
         setAdvancedProperty(JDBCCaseInsensitiveConstants.GET_IS_USER_EXISTING_CASE_INSENSITIVE, "Is User " +
@@ -338,6 +347,9 @@ public class JDBCUserStoreConstants {
                 .ADD_USER_PROPERTY_OPENEDGE_SQL_CASE_INSENSITIVE, "");
         setAdvancedProperty(UserStoreConfigConstants.claimOperationsSupported, UserStoreConfigConstants.getClaimOperationsSupportedDisplayName, "true",
                 UserStoreConfigConstants.claimOperationsSupportedDescription);
+        setAdvancedProperty(UserStoreConfigConstants.enableMaxUserLimitForSCIM, UserStoreConfigConstants
+                        .enableMaxUserLimitDisplayName, "false",
+                UserStoreConfigConstants.enableMaxUserLimitForSCIMDescription);
         setProperty("UniqueID", "", "", "");
     }
 
