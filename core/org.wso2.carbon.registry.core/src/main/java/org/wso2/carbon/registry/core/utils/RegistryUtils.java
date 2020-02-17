@@ -82,6 +82,9 @@ public final class RegistryUtils {
     private static final Log log = LogFactory.getLog(RegistryUtils.class);
     private static final String ENCODING = System.getProperty("carbon.registry.character.encoding");
     private static final String MY_SQL_PRODUCT_NAME = "MySQL";
+    private static final Boolean IS_CONNECTION_ID_USE_USERNAME = Boolean.parseBoolean(
+            System.getProperty("carbon.registry.database.connectionid.useusername") != null ?
+                    System.getProperty("carbon.registry.database.connectionid.useusername") : "false");
 
     private RegistryUtils() {
     }
@@ -92,7 +95,6 @@ public final class RegistryUtils {
      * that this method should only be used for pure resource paths.
      *
      * @param resourcePath versioned resource path.
-     *
      * @return VersionPath object containing the valid resource path and the version number.
      */
     public static VersionedPath getVersionedPath(ResourcePath resourcePath) {
@@ -116,7 +118,6 @@ public final class RegistryUtils {
      * Convert an input stream into a byte array.
      *
      * @param inputStream the input stream.
-     *
      * @return the byte array.
      * @throws RegistryException if the operation failed.
      */
@@ -162,7 +163,6 @@ public final class RegistryUtils {
      * Create an in-memory input stream for the given input stream.
      *
      * @param inputStream the input stream.
-     *
      * @return the in-memory input stream.
      * @throws RegistryException if the operation failed.
      */
@@ -174,7 +174,6 @@ public final class RegistryUtils {
      * Method to obtain a unique identifier for the database connection.
      *
      * @param connection the database connection.
-     *
      * @return the unique identifier.
      */
     public static String getConnectionId(Connection connection) {
@@ -183,19 +182,26 @@ public final class RegistryUtils {
             // The connection URL is unique enough to be used as an identifier since one thread
             // makes one connection to the given URL according to our model.
             DatabaseMetaData connectionMetaData = connection.getMetaData();
-            if (connectionMetaData != null) {
-                String productName = connectionMetaData.getDatabaseProductName();
-                if (MY_SQL_PRODUCT_NAME.equals(productName)) {
+            if (!IS_CONNECTION_ID_USE_USERNAME) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Avoiding database calls when generating the connectionId.");
+                }
+                connectionId = connection.getCatalog() + "@" + connectionMetaData.getURL();
+            } else {
+                if (connectionMetaData != null) {
+                    String productName = connectionMetaData.getDatabaseProductName();
+                    if (MY_SQL_PRODUCT_NAME.equals(productName)) {
                     /*
                      For MySQL getUserName() method executes 'SELECT USER()' query on DB via mysql connector
                      causing a huge number of 'SELECT USER()' queries to be executed.
                      Hence removing username when the DB in use is MySQL.
                      */
-                    connectionId = connectionMetaData.getURL();
-                } else {
-                    connectionId =
-                            (connectionMetaData.getUserName() != null ? connectionMetaData.getUserName().split("@")[0] :
-                                    connectionMetaData.getUserName()) + "@" + connectionMetaData.getURL();
+                        connectionId = connectionMetaData.getURL();
+                    } else {
+                        connectionId =
+                                (connectionMetaData.getUserName() != null ? connectionMetaData.getUserName().split("@")[0] :
+                                        connectionMetaData.getUserName()) + "@" + connectionMetaData.getURL();
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -210,11 +216,10 @@ public final class RegistryUtils {
      * @param connectionId the database connection identifier
      * @param tenantId     the tenant identifier
      * @param resourcePath the resource path
-     *
      * @return the cache key.
      */
     public static RegistryCacheKey buildRegistryCacheKey(String connectionId, int tenantId,
-                                                   String resourcePath) {
+                                                         String resourcePath) {
         RegistryContext registryContext = RegistryContext.getBaseInstance();
         String absoluteLocalRepositoryPath = getAbsolutePath(registryContext,
                 RegistryConstants.LOCAL_REPOSITORY_BASE_PATH);
@@ -232,7 +237,6 @@ public final class RegistryUtils {
      * the valid path for that path.
      *
      * @param resourcePath Path of a pure resource.
-     *
      * @return Valid path of the pure resource.
      */
     public static String getPureResourcePath(String resourcePath) {
@@ -280,10 +284,11 @@ public final class RegistryUtils {
 
     /**
      * Method used to retrieve cache object for resources
+     *
      * @param name the name of the cache
      * @return the cache object for the given cache manger and cache name
      */
-    public static Cache<RegistryCacheKey, GhostResource> getResourceCache(String name){
+    public static Cache<RegistryCacheKey, GhostResource> getResourceCache(String name) {
         CacheManager manager = getCacheManager();
         return (manager != null) ? manager.<RegistryCacheKey, GhostResource>getCache(name) :
                 Caching.getCacheManager().<RegistryCacheKey, GhostResource>getCache(name);
@@ -291,10 +296,11 @@ public final class RegistryUtils {
 
     /**
      * Method used to retrieve cache object for resource paths.
+     *
      * @param name the name of the cache
      * @return the cache object for the given cache manger and cache name
      */
-    public static Cache<RegistryCacheKey, RegistryCacheEntry> getResourcePathCache(String name){
+    public static Cache<RegistryCacheKey, RegistryCacheEntry> getResourcePathCache(String name) {
         CacheManager manager = getCacheManager();
         return (manager != null) ? manager.<RegistryCacheKey, RegistryCacheEntry>getCache(name) :
                 Caching.getCacheManager().<RegistryCacheKey, RegistryCacheEntry>getCache(name);
@@ -302,6 +308,7 @@ public final class RegistryUtils {
 
     /**
      * Method used to retrieve cache object for UUID, resource paths.
+     *
      * @param name the name of the cache
      * @return the cache object for the given cache manger and cache name
      */
@@ -320,7 +327,6 @@ public final class RegistryUtils {
      * Method to obtain the parent path of the given resource path.
      *
      * @param resourcePath the resource path.
-     *
      * @return the parent path.
      */
     public static String getParentPath(String resourcePath) {
@@ -353,7 +359,6 @@ public final class RegistryUtils {
      * Returns resource name when full resource path is passed.
      *
      * @param resourcePath full resource path.
-     *
      * @return the resource name.
      */
     public static String getResourceName(String resourcePath) {
@@ -403,7 +408,6 @@ public final class RegistryUtils {
      * resource paths may refer to pure resources or virtual resources.
      *
      * @param rawPath Raw path to be prepared
-     *
      * @return Prepared general resource path
      */
     public static String prepareGeneralPath(String rawPath) {
@@ -422,7 +426,6 @@ public final class RegistryUtils {
      *
      * @param userName  the user name.
      * @param userRealm the user realm.
-     *
      * @return true if the user is in the admin role, or false otherwise.
      * @throws RegistryException if the operation failed.
      */
@@ -473,7 +476,6 @@ public final class RegistryUtils {
      *
      * @param value the string to search.
      * @param array the array of string.
-     *
      * @return whether the given string was found.
      */
     public static boolean containsString(String value, String[] array) {
@@ -494,7 +496,6 @@ public final class RegistryUtils {
      *
      * @param value the string to search.
      * @param array the array of string.
-     *
      * @return whether the given string was found.
      */
     public static boolean containsAsSubString(String value, String[] array) {
@@ -510,9 +511,8 @@ public final class RegistryUtils {
      * Method to remove the author and updater from a dump.
      *
      * @param root the input XML element.
-     *
      * @return the output which contains the input XML element, but without details of the author
-     *         and the updater.
+     * and the updater.
      */
     @SuppressWarnings("unused")
     public static OMElement removeAuthorUpdaterFromDump(OMElement root) {
@@ -613,15 +613,13 @@ public final class RegistryUtils {
      * should be created. Once it has been identified that a system collection is existing, it will
      * not be checked against a database until the server has been restarted.
      *
-     * @param registry the base registry to use.
+     * @param registry     the base registry to use.
      * @param absolutePath the absolute path of the system resource (or collection)
-     *
      * @return whether the system resource (or collection) needs to be added.
-     *
      * @throws RegistryException if an error occurred.
      */
     public static boolean systemResourceShouldBeAdded(Registry registry, String absolutePath)
-        throws RegistryException {
+            throws RegistryException {
         RegistryContext registryContext = registry.getRegistryContext();
         if (registryContext == null) {
             registryContext = RegistryContext.getBaseInstance();
@@ -641,10 +639,8 @@ public final class RegistryUtils {
      * not be checked against a database until the server has been restarted.
      *
      * @param dataAccessObject the resource data access object.
-     * @param absolutePath the absolute path of the system resource (or collection)
-     *
+     * @param absolutePath     the absolute path of the system resource (or collection)
      * @return whether the system resource (or collection) needs to be added.
-     *
      * @throws RegistryException if an error occurred.
      */
     public static boolean systemResourceShouldBeAdded(ResourceDAO dataAccessObject,
@@ -667,7 +663,6 @@ public final class RegistryUtils {
      *
      * @param registry  the base registry to use.
      * @param userRealm the user realm.
-     *
      * @throws RegistryException if an error occurred.
      */
     @SuppressWarnings("unused")
@@ -774,6 +769,7 @@ public final class RegistryUtils {
 
     /**
      * This method is used to remove LC information from artifacts when clean up operation is done.
+     *
      * @param registry
      * @throws RegistryException
      */
@@ -801,28 +797,28 @@ public final class RegistryUtils {
                     + "RP.REG_PROPERTY_ID=PP.REG_ID AND  lower(PP.REG_NAME) LIKE ?  AND R.REG_NAME IS NULL";
         } else {
             collectionQuery += "R.REG_PATH_ID=RP.REG_PATH_ID AND "
-                            + "R.REG_NAME IS NULL AND RP.REG_RESOURCE_NAME IS NULL AND "
-                            + "RP.REG_PROPERTY_ID=PP.REG_ID AND  lower(PP.REG_NAME) LIKE ?  AND R.REG_NAME IS NULL";
+                    + "R.REG_NAME IS NULL AND RP.REG_RESOURCE_NAME IS NULL AND "
+                    + "RP.REG_PROPERTY_ID=PP.REG_ID AND  lower(PP.REG_NAME) LIKE ?  AND R.REG_NAME IS NULL";
         }
 
 
-        Map<String,Object> paramMapResources = new HashMap<String, Object>();
-        paramMapResources.put("1","registry.lc.name");
+        Map<String, Object> paramMapResources = new HashMap<String, Object>();
+        paramMapResources.put("1", "registry.lc.name");
         paramMapResources.put("query", resourceQuery);
 
-        Map<String,Object> paramMapCollections= new HashMap<String, Object>();
-        paramMapCollections.put("1","registry.lc.name");
+        Map<String, Object> paramMapCollections = new HashMap<String, Object>();
+        paramMapCollections.put("1", "registry.lc.name");
         paramMapCollections.put("query", collectionQuery);
 
-        resourcePaths = (String[]) registry.executeQuery(null,paramMapResources).getContent();
-        collectionpaths = (String[]) registry.executeQuery(null,paramMapCollections).getContent();
+        resourcePaths = (String[]) registry.executeQuery(null, paramMapResources).getContent();
+        collectionpaths = (String[]) registry.executeQuery(null, paramMapCollections).getContent();
 
-        for (String path : resourcePaths){
-            removeArtifactLC(path,registry);
+        for (String path : resourcePaths) {
+            removeArtifactLC(path, registry);
         }
 
-        for (String path : collectionpaths){
-            removeArtifactLC(path,registry);
+        for (String path : collectionpaths) {
+            removeArtifactLC(path, registry);
         }
 
     }
@@ -832,7 +828,6 @@ public final class RegistryUtils {
      *
      * @param path     the path of the resource.
      * @param registry the registry instance on which the resource is available.
-     *
      * @throws RegistryException if the operation failed.
      */
     private static void removeArtifactLC(String path, Registry registry)
@@ -850,8 +845,8 @@ public final class RegistryUtils {
                 String propKey = (String) iKeys.next();
 
                 if (propKey.startsWith("registry.custom_lifecycle.votes.")
-                        ||propKey.startsWith("registry.custom_lifecycle.user.")
-                        ||propKey.startsWith("registry.custom_lifecycle.checklist.")
+                        || propKey.startsWith("registry.custom_lifecycle.user.")
+                        || propKey.startsWith("registry.custom_lifecycle.checklist.")
                         || propKey.startsWith("registry.LC.name")
                         || propKey.startsWith("registry.lifecycle.")
                         || propKey.startsWith("registry.Aspects")) {
@@ -859,7 +854,7 @@ public final class RegistryUtils {
                 }
             }
 
-            for(String propertyName : propertiesToRemove) {
+            for (String propertyName : propertiesToRemove) {
                 resource.removeProperty(propertyName);
             }
 
@@ -872,6 +867,7 @@ public final class RegistryUtils {
             throw new RegistryException(msg, e);
         }
     }
+
     @Deprecated
     @SuppressWarnings("unused")
     public static void addSystemCollection(Registry registry, UserRealm userRealm)
@@ -973,7 +969,6 @@ public final class RegistryUtils {
      *
      * @param registry     the registry to use.
      * @param profilesPath the path at which user profiles are stored.
-     *
      * @throws RegistryException if an error occurred.
      */
     public static void addUserProfileCollection(Registry registry, String profilesPath)
@@ -1001,7 +996,6 @@ public final class RegistryUtils {
      *
      * @param registry    the registry to use.
      * @param servicePath the path at which services are stored.
-     *
      * @throws RegistryException if an error occurred.
      */
     public static void addServiceStoreCollection(Registry registry, String servicePath)
@@ -1028,7 +1022,6 @@ public final class RegistryUtils {
      * Method to add the collection where the mount information is stored.
      *
      * @param registry the registry to use.
-     *
      * @throws RegistryException if an error occurred.
      */
     public static void addMountCollection(Registry registry) throws RegistryException {
@@ -1061,7 +1054,6 @@ public final class RegistryUtils {
      *
      * @param systemRegistry the registry to use.
      * @param tenantId       the identifier of the tenant.
-     *
      * @throws RegistryException if an error occurred.
      */
     public static void registerMountPoints(Registry systemRegistry, int tenantId)
@@ -1118,7 +1110,6 @@ public final class RegistryUtils {
      * Method to obtain the filter used with the mounting handler.
      *
      * @param path the path at which the mount was added.
-     *
      * @return the built filter instance.
      */
     public static URLMatcher getMountingMatcher(String path) {
@@ -1128,63 +1119,63 @@ public final class RegistryUtils {
         matcher.setPattern(matchedWith);
         return matcher;
     }
-    
-	// Sets-up the media types for this instance.
-	public static void setupMediaTypes(RegistryService registryService, int tenantId) {
-		try {
-			Registry registry = registryService.getConfigSystemRegistry(tenantId);
-			MediaTypesUtils.getResourceMediaTypeMappings(registry);
-			MediaTypesUtils.getCustomUIMediaTypeMappings(registry);
-			MediaTypesUtils.getCollectionMediaTypeMappings(registry);
-		} catch (RegistryException e) {
-			log.error("Unable to create fixed remote mounts.", e);
-		}
-	}
 
-	// Do tenant-specific initialization.
-	public static void initializeTenant(RegistryService registryService, int tenantId)
-	                                                                                  throws RegistryException {
-		try {
-			UserRegistry systemRegistry = registryService.getConfigSystemRegistry();
-			if (systemRegistry.getRegistryContext() != null) {
-				HandlerManager handlerManager =
-				                                systemRegistry.getRegistryContext()
-				                                              .getHandlerManager();
-				if (handlerManager instanceof HandlerLifecycleManager) {
-					((HandlerLifecycleManager) handlerManager).init(tenantId);
-				}
-			}
-			systemRegistry =
-			                 registryService.getRegistry(CarbonConstants.REGISTRY_SYSTEM_USERNAME,
-			                                             tenantId);
-			addMountCollection(systemRegistry);
-			registerMountPoints(systemRegistry, tenantId);
-			new RegistryCoreServiceComponent().setupMounts(registryService, tenantId);
-			setupMediaTypes(registryService, tenantId);
-			// We need to set the tenant ID for current session. Otherwise the
-			// underlying operations fails
-			try {
-				CurrentSession.setTenantId(tenantId);
-				RegistryContext registryContext = systemRegistry.getRegistryContext();
-				// Adding collection to store user profile information.
-				addUserProfileCollection(systemRegistry,
-				                         getAbsolutePath(registryContext,
-				                                         registryContext.getProfilesPath()));
-				// Adding collection to store services.
-				addServiceStoreCollection(systemRegistry,
-				                          getAbsolutePath(registryContext,
-				                                          registryContext.getServicePath()));
-				// Adding service configuration resources.
-				addServiceConfigResources(systemRegistry);
-			} finally {
-				CurrentSession.removeTenantId();
-			}
-		} catch (RegistryException e) {
-			log.error("Unable to initialize registry for tenant " + tenantId + ".", e);
-			throw new RegistryException("Unable to initialize registry for tenant " + tenantId +
-			                            ".", e);
-		}
-	}
+    // Sets-up the media types for this instance.
+    public static void setupMediaTypes(RegistryService registryService, int tenantId) {
+        try {
+            Registry registry = registryService.getConfigSystemRegistry(tenantId);
+            MediaTypesUtils.getResourceMediaTypeMappings(registry);
+            MediaTypesUtils.getCustomUIMediaTypeMappings(registry);
+            MediaTypesUtils.getCollectionMediaTypeMappings(registry);
+        } catch (RegistryException e) {
+            log.error("Unable to create fixed remote mounts.", e);
+        }
+    }
+
+    // Do tenant-specific initialization.
+    public static void initializeTenant(RegistryService registryService, int tenantId)
+            throws RegistryException {
+        try {
+            UserRegistry systemRegistry = registryService.getConfigSystemRegistry();
+            if (systemRegistry.getRegistryContext() != null) {
+                HandlerManager handlerManager =
+                        systemRegistry.getRegistryContext()
+                                .getHandlerManager();
+                if (handlerManager instanceof HandlerLifecycleManager) {
+                    ((HandlerLifecycleManager) handlerManager).init(tenantId);
+                }
+            }
+            systemRegistry =
+                    registryService.getRegistry(CarbonConstants.REGISTRY_SYSTEM_USERNAME,
+                            tenantId);
+            addMountCollection(systemRegistry);
+            registerMountPoints(systemRegistry, tenantId);
+            new RegistryCoreServiceComponent().setupMounts(registryService, tenantId);
+            setupMediaTypes(registryService, tenantId);
+            // We need to set the tenant ID for current session. Otherwise the
+            // underlying operations fails
+            try {
+                CurrentSession.setTenantId(tenantId);
+                RegistryContext registryContext = systemRegistry.getRegistryContext();
+                // Adding collection to store user profile information.
+                addUserProfileCollection(systemRegistry,
+                        getAbsolutePath(registryContext,
+                                registryContext.getProfilesPath()));
+                // Adding collection to store services.
+                addServiceStoreCollection(systemRegistry,
+                        getAbsolutePath(registryContext,
+                                registryContext.getServicePath()));
+                // Adding service configuration resources.
+                addServiceConfigResources(systemRegistry);
+            } finally {
+                CurrentSession.removeTenantId();
+            }
+        } catch (RegistryException e) {
+            log.error("Unable to initialize registry for tenant " + tenantId + ".", e);
+            throw new RegistryException("Unable to initialize registry for tenant " + tenantId +
+                    ".", e);
+        }
+    }
 
     // This class is used to implement a URL Matcher that could be used for Mounting related
     // handlers.
@@ -1230,14 +1221,13 @@ public final class RegistryUtils {
                 Filter.GET_ALL_ASSOCIATIONS, Filter.GET_ASSOCIATIONS, Filter.ADD_ASSOCIATION,
                 Filter.DUMP, Filter.RESTORE, Filter.REMOVE_ASSOCIATION, Filter.IMPORT,
                 Filter.EXECUTE_QUERY, Filter.GET_RESOURCE_PATHS_WITH_TAG,
-                Filter.GET_REGISTRY_CONTEXT, Filter.REMOVE_LINK };
+                Filter.GET_REGISTRY_CONTEXT, Filter.REMOVE_LINK};
     }
-    
+
     /**
      * Method to add the resources where the service configuration are stored.
      *
      * @param registry the registry to use.
-     *
      * @throws RegistryException if an error occurred.
      */
     public static void addServiceConfigResources(Registry registry) throws RegistryException {
@@ -1265,7 +1255,6 @@ public final class RegistryUtils {
      *
      * @param chroot1 the base chroot path (or the registry root).
      * @param chroot2 the the relative chroot path.
-     *
      * @return the full chroot path.
      */
     public static String concatenateChroot(String chroot1, String chroot2) {
@@ -1294,7 +1283,6 @@ public final class RegistryUtils {
      * Method to determine whether this registry is running in Read-Only mode.
      *
      * @param registryContext the registry context.
-     *
      * @return true if read-only or false otherwise.
      */
     public static boolean isRegistryReadOnly(RegistryContext registryContext) {
@@ -1319,7 +1307,6 @@ public final class RegistryUtils {
      * this method can only be called if the registry context is initialized.
      *
      * @param coreRegistry the core registry instance.
-     *
      * @return the user registry instance for the special system user.
      * @throws RegistryException if the operation failed.
      */
@@ -1379,7 +1366,7 @@ public final class RegistryUtils {
      */
     @SuppressWarnings("unused")
     // This method is used in Components.
-    public static void recordStatistics(Object ... parameters) {
+    public static void recordStatistics(Object... parameters) {
         StatisticsCollector[] statisticsCollectors =
                 RegistryContext.getBaseInstance().getStatisticsCollectors();
         for (StatisticsCollector collector : statisticsCollectors) {
@@ -1391,7 +1378,6 @@ public final class RegistryUtils {
      * This method returns the bootstrap (or initial) user realm from the realm service.
      *
      * @param realmService the OSGi service which we can use to obtain the user realm.
-     *
      * @return the bootstrap realm.
      * @throws RegistryException if the operation failed.
      */
@@ -1410,7 +1396,6 @@ public final class RegistryUtils {
      * Method to obtain the unchrooted path for the given relative path.
      *
      * @param path the relative path.
-     *
      * @return the unchrooted path.
      */
     public static String getUnChrootedPath(String path) {
@@ -1428,7 +1413,7 @@ public final class RegistryUtils {
             // we are already checking the unchrooted paths, so no more work
             return localPath;
         }
-        
+
         String chrootPrefix = getChrootPrefix();
         if (chrootPrefix == null) {
             // no chroot defined or it equals to root.
@@ -1466,7 +1451,6 @@ public final class RegistryUtils {
      *
      * @param context      the registry context.
      * @param absolutePath the absolute path.
-     *
      * @return the relative path.
      */
     public static String getRelativePath(RegistryContext context, String absolutePath) {
@@ -1482,7 +1466,6 @@ public final class RegistryUtils {
      *
      * @param context      the registry context.
      * @param relativePath the relative path.
-     *
      * @return the absolute path.
      */
     public static String getAbsolutePath(RegistryContext context, String relativePath) {
@@ -1499,7 +1482,6 @@ public final class RegistryUtils {
      * @param absolutePath the absolute path.
      * @param originalPath the path to which we need to make the given absolute path a relative
      *                     one.
-     *
      * @return the relative path.
      */
     public static String getRelativePathToOriginal(String absolutePath, String originalPath) {
@@ -1534,7 +1516,6 @@ public final class RegistryUtils {
      * @param relativePath the relative path.
      * @param originalPath the path to which we need to make the given relative path a absolute
      *                     one.
-     *
      * @return the absolute path.
      */
     public static String getAbsolutePathToOriginal(String relativePath, String originalPath) {
@@ -1567,7 +1548,6 @@ public final class RegistryUtils {
      * @param path    the path at which the symbolic link is created.
      * @param target  the target path.
      * @param author  the creator of the symbolic link.
-     *
      * @throws RegistryException if the operation failed.
      */
     public static void registerHandlerForSymbolicLinks(RegistryContext context,
@@ -1588,7 +1568,7 @@ public final class RegistryUtils {
         Set<SymLinkHandler> symLinkHandlers = SymLinkHandler.getSymLinkHandlers();
 
         List<SymLinkHandler> handlersToRemove = new ArrayList<SymLinkHandler>();
-        for (SymLinkHandler symLinkHandler: symLinkHandlers) {
+        for (SymLinkHandler symLinkHandler : symLinkHandlers) {
             String symLinkTarget = symLinkHandler.getTargetPoint();
 
             // and then we remove old entries for the same mount path
@@ -1600,7 +1580,7 @@ public final class RegistryUtils {
         // removing the symlink handlers
         for (SymLinkHandler handlerToRemove : handlersToRemove) {
             hm.removeHandler(handlerToRemove,
-                HandlerLifecycleManager.TENANT_SPECIFIC_SYSTEM_HANDLER_PHASE);
+                    HandlerLifecycleManager.TENANT_SPECIFIC_SYSTEM_HANDLER_PHASE);
         }
 
         // and importantly add the new entry, the currently creating symlink information..
@@ -1615,7 +1595,6 @@ public final class RegistryUtils {
      * @param target          the target path.
      * @param targetSubPath   the target sub-path.
      * @param author          the creator of the remote link.
-     *
      * @throws RegistryException if the operation failed.
      */
     public static void registerHandlerForRemoteLinks(RegistryContext registryContext,
@@ -1635,7 +1614,6 @@ public final class RegistryUtils {
      * @param author          the creator of the remote link.
      * @param forAllTenants   whether the remote link should be added to the tenant on the current
      *                        registry session or to all the tenants.
-     *
      * @throws RegistryException if the operation failed.
      */
     public static void registerHandlerForRemoteLinks(RegistryContext registryContext,
@@ -1683,14 +1661,14 @@ public final class RegistryUtils {
                     "The following mount point is not registered. " +
                     "path: " + path + ", " +
                     "target: " + target + ", " +
-                    ((targetSubPath == null)? "": ("target sub path: " + targetSubPath + ", "));
+                    ((targetSubPath == null) ? "" : ("target sub path: " + targetSubPath + ", "));
             log.debug(msg);
         } else {
             String msg = "Target mount path is not found, " +
                     "The following mount point is not registered. " +
                     "path: " + path + ", " +
                     "target: " + target + ", " +
-                    ((targetSubPath == null)? "": ("target sub path: " + targetSubPath + ", "));
+                    ((targetSubPath == null) ? "" : ("target sub path: " + targetSubPath + ", "));
             log.debug(msg);
         }
     }
@@ -1704,7 +1682,6 @@ public final class RegistryUtils {
      * @param target          the target path or instance.
      * @param targetSubPath   the target sub-path.
      * @param author          the author
-     *
      * @throws RegistryException if the operation failed.
      */
     public static void addMountEntry(Registry registry, RegistryContext registryContext,
@@ -1719,7 +1696,7 @@ public final class RegistryUtils {
         r.addProperty("subPath", targetSubPath);
         r.setMediaType(RegistryConstants.MOUNT_MEDIA_TYPE);
         String mountPath = RegistryConstants.LOCAL_REPOSITORY_BASE_PATH +
-                        RegistryConstants.SYSTEM_MOUNT_PATH + "/" +
+                RegistryConstants.SYSTEM_MOUNT_PATH + "/" +
                 relativePath.replace("/", "-");
         if (!registry.resourceExists(mountPath)) {
             registry.put(mountPath, r);
@@ -1735,7 +1712,6 @@ public final class RegistryUtils {
      * @param target          the target path or instance.
      * @param remote          whether local or remote link.
      * @param author          the author
-     *
      * @throws RegistryException if the operation failed.
      */
     public static void addMountEntry(Registry registry, RegistryContext registryContext,
@@ -1755,7 +1731,7 @@ public final class RegistryUtils {
         r.addProperty("author", author);
         r.setMediaType(RegistryConstants.MOUNT_MEDIA_TYPE);
         String mountPath = RegistryConstants.LOCAL_REPOSITORY_BASE_PATH +
-                        RegistryConstants.SYSTEM_MOUNT_PATH + "/" +
+                RegistryConstants.SYSTEM_MOUNT_PATH + "/" +
                 relativePath.replace("/", "-");
         if (!registry.resourceExists(mountPath)) {
             registry.put(mountPath, r);
@@ -1770,7 +1746,6 @@ public final class RegistryUtils {
      * @param path        the path of the resource.
      * @param resourceDAO the resource data access object to use.
      * @param versioned   whether version or not.
-     *
      * @return the resource with minimum data.
      * @throws RegistryException if an error occurs while retrieving resource data.
      */
@@ -1803,7 +1778,6 @@ public final class RegistryUtils {
      *
      * @param path          absolute path value.
      * @param referencePath the reference path
-     *
      * @return the relative path
      */
     public static String getRelativeAssociationPath(String path, String referencePath) {
@@ -1830,7 +1804,7 @@ public final class RegistryUtils {
         }
 
         String relPath;
-        if(pathParts.length != 0){
+        if (pathParts.length != 0) {
             relPath = prefix.append(pathParts[j]).toString();
         } else {
             relPath = path; //For the root("/") associations
@@ -1848,7 +1822,6 @@ public final class RegistryUtils {
      *
      * @param path          relative path value.
      * @param referencePath the reference path
-     *
      * @return the absolute path
      */
     public static String getAbsoluteAssociationPath(String path,
@@ -1891,14 +1864,13 @@ public final class RegistryUtils {
      * Load the class with the given name
      *
      * @param name name of the class
-     *
      * @return java class
      * @throws ClassNotFoundException if the class does not exists in the classpath
      */
     public static Class loadClass(String name) throws ClassNotFoundException {
         try {
             return Class.forName(name);
-        } catch(ClassNotFoundException e) {
+        } catch (ClassNotFoundException e) {
             File extensionLibDirectory = new File(RegistryUtils.getExtensionLibDirectoryPath());
             if (extensionLibDirectory.exists() && extensionLibDirectory.isDirectory()) {
                 File[] files = extensionLibDirectory.listFiles(new FilenameFilter() {
@@ -1908,10 +1880,11 @@ public final class RegistryUtils {
                 });
                 if (files != null && files.length > 0) {
                     List<URL> urls = new ArrayList<URL>(files.length);
-                    for(File file : files) {
+                    for (File file : files) {
                         try {
                             urls.add(file.toURI().toURL());
-                        } catch (MalformedURLException ignore) { }
+                        } catch (MalformedURLException ignore) {
+                        }
                     }
                     ClassLoader origTCCL = Thread.currentThread().getContextClassLoader();
                     try {
@@ -1929,6 +1902,7 @@ public final class RegistryUtils {
 
     /**
      * Method to determine whether a property is a hidden property or not.
+     *
      * @param propertyName the name of property.
      * @return true if the property is a hidden property or false if not.
      */
@@ -1938,10 +1912,10 @@ public final class RegistryUtils {
 
     public static String getExtensionLibDirectoryPath() {
         CarbonContext carbonContext =
-               CarbonContext.getThreadLocalCarbonContext(); 
+                CarbonContext.getThreadLocalCarbonContext();
         int tempTenantId = carbonContext.getTenantId();
         return ((tempTenantId != MultitenantConstants.INVALID_TENANT_ID &&
-        		tempTenantId != MultitenantConstants.SUPER_TENANT_ID) ?
+                tempTenantId != MultitenantConstants.SUPER_TENANT_ID) ?
                 (CarbonUtils.getCarbonTenantsDirPath() + File.separator +
                         carbonContext.getTenantId()) :
                 (CarbonUtils.getCarbonHome() + File.separator + "repository" + File.separator +
@@ -1960,7 +1934,7 @@ public final class RegistryUtils {
             }
         } catch (UnsupportedEncodingException e) {
             String msg = ENCODING + " is unsupported encoding type";
-            log.error(msg ,e);
+            log.error(msg, e);
             throw new RegistryException(msg, e);
         }
         return co;
@@ -1977,7 +1951,7 @@ public final class RegistryUtils {
 
         } catch (UnsupportedEncodingException e) {
             String msg = ENCODING + " is unsupported encoding type";
-            log.error(msg,e);
+            log.error(msg, e);
             throw new RegistryException(msg, e);
         }
         return bytes;
