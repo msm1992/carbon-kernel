@@ -16,11 +16,12 @@
 package org.wso2.carbon.core;
 
 import javax.servlet.http.Cookie;
+
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- *  This extended method handle the sameSite value and newly added value for the cookies.
+ * This extended method handle the sameSite value and newly added value for the cookies.
  */
 public class ServletCookie extends Cookie {
 

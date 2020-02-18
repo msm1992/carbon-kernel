@@ -23,15 +23,18 @@ import javax.servlet.http.Cookie;
  * Tomcat Response facade extension to put SameSite attribute to any cookie present, where it is not already set.
  */
 public class ResponseFacadeWrapper extends ResponseFacade {
+
     private CarbonResponseWrapper carbonResponseWrapper;
 
     public ResponseFacadeWrapper(CarbonResponseWrapper carbonResponseWrapper) {
+
         super(carbonResponseWrapper.getWrapped());
         this.carbonResponseWrapper = carbonResponseWrapper;
     }
 
     @Override
     public void addCookie(Cookie cookie) {
+
         carbonResponseWrapper.addCookie(cookie);
     }
 }
