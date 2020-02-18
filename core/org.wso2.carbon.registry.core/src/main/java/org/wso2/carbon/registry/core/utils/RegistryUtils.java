@@ -182,26 +182,28 @@ public final class RegistryUtils {
             // The connection URL is unique enough to be used as an identifier since one thread
             // makes one connection to the given URL according to our model.
             DatabaseMetaData connectionMetaData = connection.getMetaData();
+            if (connectionMetaData != null) {
+                return connectionId;
+            }
             if (IS_CONNECTION_ID_AVOID_DB_CALLS) {
                 if (log.isDebugEnabled()) {
                     log.debug("Avoiding database calls when generating the connectionId.");
                 }
                 connectionId = connection.getCatalog() + "@" + connectionMetaData.getURL();
             } else {
-                if (connectionMetaData != null) {
-                    String productName = connectionMetaData.getDatabaseProductName();
-                    if (MY_SQL_PRODUCT_NAME.equals(productName)) {
+                String productName = connectionMetaData.getDatabaseProductName();
+                if (MY_SQL_PRODUCT_NAME.equals(productName)) {
                     /*
                      For MySQL getUserName() method executes 'SELECT USER()' query on DB via mysql connector
                      causing a huge number of 'SELECT USER()' queries to be executed.
                      Hence removing username when the DB in use is MySQL.
                      */
-                        connectionId = connectionMetaData.getURL();
-                    } else {
-                        connectionId =
-                                (connectionMetaData.getUserName() != null ? connectionMetaData.getUserName().split("@")[0] :
-                                        connectionMetaData.getUserName()) + "@" + connectionMetaData.getURL();
-                    }
+                    connectionId = connectionMetaData.getURL();
+                } else {
+                    connectionId =
+                            (connectionMetaData.getUserName() != null ?
+                                    connectionMetaData.getUserName().split("@")[0] :
+                                    connectionMetaData.getUserName()) + "@" + connectionMetaData.getURL();
                 }
             }
         } catch (SQLException e) {
