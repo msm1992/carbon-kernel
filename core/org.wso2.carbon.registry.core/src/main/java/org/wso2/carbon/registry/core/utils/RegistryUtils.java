@@ -182,7 +182,7 @@ public final class RegistryUtils {
             // The connection URL is unique enough to be used as an identifier since one thread
             // makes one connection to the given URL according to our model.
             DatabaseMetaData connectionMetaData = connection.getMetaData();
-            if (connectionMetaData != null) {
+            if (connectionMetaData == null) {
                 return connectionId;
             }
             if (IS_CONNECTION_ID_AVOID_DB_CALLS) {
