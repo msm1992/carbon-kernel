@@ -82,9 +82,9 @@ public final class RegistryUtils {
     private static final Log log = LogFactory.getLog(RegistryUtils.class);
     private static final String ENCODING = System.getProperty("carbon.registry.character.encoding");
     private static final String MY_SQL_PRODUCT_NAME = "MySQL";
-    private static final Boolean IS_CONNECTION_ID_USE_USERNAME = Boolean.parseBoolean(
-            System.getProperty("carbon.registry.database.connectionid.useusername") != null ?
-                    System.getProperty("carbon.registry.database.connectionid.useusername") : "false");
+    private static final Boolean IS_CONNECTION_ID_AVOID_DB_CALLS = Boolean.parseBoolean(
+            System.getProperty("carbon.registry.database.connectionid.avoiddbcalls") != null ?
+                    System.getProperty("carbon.registry.database.connectionid.avoiddbcalls") : "false");
 
     private RegistryUtils() {
     }
@@ -182,7 +182,7 @@ public final class RegistryUtils {
             // The connection URL is unique enough to be used as an identifier since one thread
             // makes one connection to the given URL according to our model.
             DatabaseMetaData connectionMetaData = connection.getMetaData();
-            if (!IS_CONNECTION_ID_USE_USERNAME) {
+            if (IS_CONNECTION_ID_AVOID_DB_CALLS) {
                 if (log.isDebugEnabled()) {
                     log.debug("Avoiding database calls when generating the connectionId.");
                 }
