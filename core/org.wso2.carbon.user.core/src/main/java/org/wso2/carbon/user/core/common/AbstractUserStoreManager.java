@@ -556,7 +556,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
 
         List<String> userStorePreferenceOrder = new ArrayList<>();
         // Check whether user store chain needs to be generated or not.
-        if (isUserStoreChainNeeded(userStorePreferenceOrder)) {
+        if (isUserStoreChainNeeded(userStorePreferenceOrder, userName)) {
             if (log.isDebugEnabled()) {
                 log.debug("User store chain generation is needed hence generating the user store chain using the user" +
                         " store preference order: " + userStorePreferenceOrder);
@@ -600,18 +600,25 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
     private boolean authenticateInternal(String userName, Object credential, boolean domainProvided)
             throws UserStoreException {
 
+        boolean iterative = false;
+
         AbstractUserStoreManager abstractUserStoreManager = this;
         if (this instanceof IterativeUserStoreManager) {
+            iterative = true;
             abstractUserStoreManager = ((IterativeUserStoreManager) this).getAbstractUserStoreManager();
+        }
+        UserStore userStore = abstractUserStoreManager.getUserStore(userName);
+        if (iterative) {
+            userName = userStore.getDomainFreeName();
+        } else {
+            if (userStore.isRecurssive() && userStore.getUserStoreManager() instanceof AbstractUserStoreManager) {
+                return ((AbstractUserStoreManager) userStore.getUserStoreManager()).authenticate(userStore.getDomainFreeName(),
+                        credential, domainProvided);
+            }
         }
 
         boolean authenticated = false;
 
-        UserStore userStore = abstractUserStoreManager.getUserStore(userName);
-        if (userStore.isRecurssive() && userStore.getUserStoreManager() instanceof AbstractUserStoreManager) {
-            return ((AbstractUserStoreManager) userStore.getUserStoreManager()).authenticate(userStore.getDomainFreeName(),
-                    credential, domainProvided);
-        }
 
         Secret credentialObj;
         try {
@@ -722,7 +729,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
 
         // If authentication fails in the previous step and if the user has not specified a
         // domain- then we need to execute chained UserStoreManagers recursively.
-        if (!authenticated && !domainProvided) {
+        if (!authenticated && (!domainProvided || iterative)) {
             AbstractUserStoreManager userStoreManager;
             if (this instanceof IterativeUserStoreManager) {
                 IterativeUserStoreManager iterativeUserStoreManager = (IterativeUserStoreManager) this;
@@ -7020,8 +7027,6 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                 .startsWith(UserCoreConstants.INTERNAL_DOMAIN.toLowerCase()) || roleName.toLowerCase()
                 .startsWith(WORKFLOW_DOMAIN.toLowerCase());
     }
-}
-
 
     private List<String> getUserStorePreferenceOrder() throws UserStoreException {
 
@@ -7046,12 +7051,22 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         return this instanceof IterativeUserStoreManager;
     }
 
-    private boolean isUserStoreChainNeeded(List<String> userStorePreferenceOrder) throws UserStoreException {
+    private boolean isUserStoreChainNeeded(List<String> userStorePreferenceOrder, String userName) throws UserStoreException {
 
         if (this instanceof IterativeUserStoreManager) {
             return false;
         }
         userStorePreferenceOrder.addAll(getUserStorePreferenceOrder());
+        // Check whether user store domain is specified.
+        if (userName.indexOf(CarbonConstants.DOMAIN_SEPARATOR) > 0) {
+            String domainName = this.getUserStore(userName).getDomainName();
+            if (CollectionUtils.isNotEmpty(userStorePreferenceOrder) && !userStorePreferenceOrder.contains(domainName)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Authentication failure. Wrong username or password is provided.");
+                }
+                throw new UserStoreException("Authentication failure. Wrong username or password is provided.");
+            }
+        }
         return CollectionUtils.isNotEmpty(userStorePreferenceOrder) && !hasUserStorePreferenceChainGenerated();
     }
 
