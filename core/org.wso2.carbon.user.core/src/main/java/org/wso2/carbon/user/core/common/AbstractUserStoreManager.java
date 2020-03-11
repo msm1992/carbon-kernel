@@ -603,18 +603,27 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         boolean iterative = false;
 
         AbstractUserStoreManager abstractUserStoreManager = this;
+        IterativeUserStoreManager iterativeUSManager = null;
         if (this instanceof IterativeUserStoreManager) {
             iterative = true;
-            abstractUserStoreManager = ((IterativeUserStoreManager) this).getAbstractUserStoreManager();
+            iterativeUSManager = (IterativeUserStoreManager) this;
+            abstractUserStoreManager = iterativeUSManager.getAbstractUserStoreManager();
         }
         UserStore userStore = abstractUserStoreManager.getUserStore(userName);
-        if (iterative) {
-            userName = userStore.getDomainFreeName();
-        } else {
-            if (userStore.isRecurssive() && userStore.getUserStoreManager() instanceof AbstractUserStoreManager) {
-                return ((AbstractUserStoreManager) userStore.getUserStoreManager()).authenticate(userStore.getDomainFreeName(),
-                        credential, domainProvided);
+
+        if (domainProvided && iterative) {
+            while (!StringUtils.equals(userStore.getDomainName(), abstractUserStoreManager.getMyDomainName()) &&
+                    iterativeUSManager.nextUserStoreManager() != null) {
+                abstractUserStoreManager = iterativeUSManager.nextUserStoreManager().getAbstractUserStoreManager();
+                iterativeUSManager = iterativeUSManager.nextUserStoreManager();
             }
+            userName = userStore.getDomainFreeName();
+            userStore.setRecurssive(false);
+        }
+
+        if (userStore.isRecurssive() && userStore.getUserStoreManager() instanceof AbstractUserStoreManager) {
+            return ((AbstractUserStoreManager) userStore.getUserStoreManager()).authenticate(userStore.getDomainFreeName(),
+                    credential, domainProvided);
         }
 
         boolean authenticated = false;
@@ -729,7 +738,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
 
         // If authentication fails in the previous step and if the user has not specified a
         // domain- then we need to execute chained UserStoreManagers recursively.
-        if (!authenticated && (!domainProvided || iterative)) {
+        if (!authenticated && !domainProvided) {
             AbstractUserStoreManager userStoreManager;
             if (this instanceof IterativeUserStoreManager) {
                 IterativeUserStoreManager iterativeUserStoreManager = (IterativeUserStoreManager) this;
