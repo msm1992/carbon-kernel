@@ -628,7 +628,6 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
 
         boolean authenticated = false;
 
-
         Secret credentialObj;
         try {
             credentialObj = Secret.getSecret(credential);
