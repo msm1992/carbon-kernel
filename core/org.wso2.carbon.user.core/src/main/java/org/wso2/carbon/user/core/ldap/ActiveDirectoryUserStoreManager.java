@@ -638,7 +638,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
     public void doSetUserClaimValue(String userName, String claimURI, String value,
                                     String profileName) throws UserStoreException {
 
-        try{
+        try {
             String attributeName = getClaimAtrribute(claimURI, userName, null);
             Map<String, String> userStoreAttributeValueMap = new HashMap<>();
             userStoreAttributeValueMap.put(attributeName, value);
@@ -646,7 +646,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
             // Exclude the immutable attributes.
             processAttributesBeforeUpdate(userStoreAttributeValueMap);
 
-            if(userStoreAttributeValueMap.isEmpty()){
+            if (userStoreAttributeValueMap.isEmpty()) {
                 return;
             }
 
