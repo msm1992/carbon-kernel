@@ -637,6 +637,25 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
     @Override
     public void doSetUserClaimValue(String userName, String claimURI, String value,
                                     String profileName) throws UserStoreException {
+
+        try{
+            String attributeName = getClaimAtrribute(claimURI, userName, null);
+            Map<String, String> userStoreAttributeValueMap = new HashMap<>();
+            userStoreAttributeValueMap.put(attributeName, value);
+
+            // Exclude the immutable attributes.
+            processAttributesBeforeUpdate(userStoreAttributeValueMap);
+
+            if(userStoreAttributeValueMap.isEmpty()){
+                return;
+            }
+
+        } catch (org.wso2.carbon.user.api.UserStoreException e) {
+            throw new UserStoreException(
+                    "Error occurred while getting the claim attribute for claimURI: " + claimURI + " of the user: "
+                            + userName, e);
+        }
+
         // get the LDAP Directory context
         DirContext dirContext = this.connectionSource.getContext();
         DirContext subDirContext = null;
