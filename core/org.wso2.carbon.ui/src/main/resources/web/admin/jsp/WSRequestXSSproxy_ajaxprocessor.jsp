@@ -125,7 +125,8 @@
     // Extract and decode all the parameters used to call WSRequest
     String uri, pattern, username, password, payload;
     try {
-        uri = decode(request.getParameter("uri"));
+        // Encode for html to avoid html content in uri being executed.
+        uri = Encode.forHtml(decode(request.getParameter("uri")));
 		pattern = decode(request.getParameter("pattern"));
         username = decode(request.getParameter("username"));
         password = decode(request.getParameter("password"));
