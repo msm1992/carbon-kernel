@@ -41,6 +41,7 @@
 <%@ page import="org.apache.commons.httpclient.Header" %>
 <%@ page import="org.wso2.carbon.ui.util.CharacterEncoder" %>
 <%@ page import="org.apache.xerces.util.SecurityManager"%>
+<%@ page import="org.owasp.encoder.Encode" %>
 <%@ page import="org.xml.sax.EntityResolver" %>
 <%@ page import="org.xml.sax.InputSource" %>
 <%@ page import="org.xml.sax.SAXException" %>
