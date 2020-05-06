@@ -5159,20 +5159,24 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
 
         if (!noInternalRoles && (filter.toLowerCase().startsWith(APPLICATION_DOMAIN.toLowerCase()))) {
             roleList = hybridRoleManager.getHybridRoles(filter);
-        } else if (!noInternalRoles && !isAnInternalRole(filter) && !filter
+        } else if (!noInternalRoles && StringUtils.isNotEmpty(filter) && !isAnInternalRole(filter) && !filter
                 .contains(UserCoreConstants.DOMAIN_SEPARATOR)) {
             // When domain name is not present in the filter value.
-            if (filter == "*") {
+            if (StringUtils.equals(filter, "*")) {
                 roleList = hybridRoleManager.getHybridRoles(filter);
             } else {
-                // Since Application domain roles are stored in db with the "Application/" prefix, when domain is not
-                // present in the filter, need to append the "Application/" before sending for db query.
+                /*
+                Since Application domain roles are stored in db with the "Application/" prefix, when domain is not
+                present in the filter, need to append the "Application/" before sending for db query
+                 */
                 String[] applicationDomainRoleArray = hybridRoleManager
                         .getHybridRoles(APPLICATION_DOMAIN + UserCoreConstants.DOMAIN_SEPARATOR + filter);
                 String[] internalDomainRoleArray = hybridRoleManager.getHybridRoles(filter);
                 List<String> internalOnlyList = new ArrayList<>();
-                // When filtering with sw, ew and co there is a possibility of returning results belonging to
-                // Application domain.
+                /*
+                When filtering with sw, ew and co there is a possibility of returning results belonging to
+                Application domain.
+                 */
                 for (String filteredRole : internalDomainRoleArray) {
                     if (filteredRole != null && !filteredRole.matches("Application/(.*)")) {
                         // Create Internal domain only list.
@@ -5180,7 +5184,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                     }
                 }
                 roleList = UserCoreUtil.combineArrays(applicationDomainRoleArray,
-                        internalOnlyList.toArray(new String[internalOnlyList.size()]));
+                        internalOnlyList.toArray(new String[0]));
             }
         } else if (!noInternalRoles) {
             roleList = hybridRoleManager.getHybridRoles(UserCoreUtil.removeDomainFromName(filter));
