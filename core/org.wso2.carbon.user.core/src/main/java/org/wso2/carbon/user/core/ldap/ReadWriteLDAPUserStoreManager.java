@@ -26,6 +26,7 @@ import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.user.api.Properties;
 import org.wso2.carbon.user.api.Property;
 import org.wso2.carbon.user.api.RealmConfiguration;
+import org.wso2.carbon.user.core.NotImplementedException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreConfigConstants;
@@ -951,6 +952,103 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             subDirContext = (DirContext) dirContext.lookup(escapeDNForSearch(userSearchBase));
             subDirContext.modifyAttributes(returnedUserEntry, DirContext.REPLACE_ATTRIBUTE,
                     updatedAttributes);
+
+        } catch (Exception e) {
+            handleException(e, userName);
+        } finally {
+            JNDIUtil.closeContext(subDirContext);
+            JNDIUtil.closeContext(dirContext);
+        }
+    }
+
+    /**
+     * This implements the functionality of adding and removing multi valued user's profile information
+     * and updating user's other profile information separately in LDAP user store.
+     *
+     * @param userName                         Username of the user.
+     * @param multiValuedClaimsToAdd           Map of multi-valued claim URIs against values to be added.
+     * @param multiValuedClaimsToDelete        Map of multi-valued claim URIs against values to be deleted.
+     * @param multiValuedClaimsToDelete        Map of claim URIs excluding multi-valued claims against values to be modified.
+     * @param claimsExcludingMultiValuedClaims The profile name, can be null. If null the default profile is considered.
+     * @throws UserStoreException      An unexpected exception has occurred.
+     * @throws NotImplementedException Functionality is not implemented exception.
+     */
+    @Override
+    public void doSetUserClaimValues(String userName, Map<String, String> multiValuedClaimsToAdd,
+                                     Map<String, String> multiValuedClaimsToDelete,
+                                     Map<String, String> claimsExcludingMultiValuedClaims, String profileName)
+            throws UserStoreException, NotImplementedException {
+
+        // Get the LDAP Directory context.
+        DirContext dirContext = this.connectionSource.getContext();
+        DirContext subDirContext = null;
+        // Search the relevant user entry by user name.
+        String userSearchBase = realmConfig.getUserStoreProperty(LDAPConstants.USER_SEARCH_BASE);
+        String userSearchFilter = realmConfig
+                .getUserStoreProperty(LDAPConstants.USER_NAME_SEARCH_FILTER);
+        // If user name contains domain name, remove domain name.
+        String[] userNames = userName.split(CarbonConstants.DOMAIN_SEPARATOR);
+        if (userNames.length > 1) {
+            userName = userNames[1];
+        }
+        userSearchFilter = userSearchFilter.replace("?", escapeSpecialCharactersForFilter(userName));
+
+        SearchControls searchControls = new SearchControls();
+        searchControls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+        searchControls.setReturningAttributes(null);
+
+        NamingEnumeration<SearchResult> returnedResultList = null;
+        String returnedUserEntry = "";
+
+        try {
+            returnedResultList = dirContext.search(escapeDNForSearch(userSearchBase), userSearchFilter, searchControls);
+            // Assume only one user is returned from the search.
+            // TODO:what if more than one user is returned
+            if (returnedResultList.hasMore()) {
+                returnedUserEntry = returnedResultList.next().getName();
+            }
+
+        } catch (NamingException e) {
+            String errorMessage = "Results could not be retrieved from the directory context for user : " + userName;
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
+            throw new UserStoreException(errorMessage, e);
+        } finally {
+            JNDIUtil.closeNamingEnumeration(returnedResultList);
+        }
+
+        if (profileName == null) {
+
+            profileName = UserCoreConstants.DEFAULT_PROFILE;
+        }
+
+        try {
+            Attributes attributesToBeAdded = getUpdatedAttributes(userName, multiValuedClaimsToAdd);
+            Attributes attributesToBeDeleted = getUpdatedAttributes(userName, multiValuedClaimsToDelete);
+            Attributes attributesToBeReplaced = getUpdatedAttributes(userName, claimsExcludingMultiValuedClaims);
+
+            subDirContext = (DirContext) dirContext.lookup(escapeDNForSearch(userSearchBase));
+
+            try {
+                subDirContext.modifyAttributes(returnedUserEntry, DirContext.ADD_ATTRIBUTE, attributesToBeAdded);
+            } catch (Exception e) {
+                if (!StringUtils.equals("error code 20 - ATTRIBUTE_OR_VALUE_EXISTS",
+                        (e.getMessage()).split(":")[1].trim())) {
+                    handleException(e, userName);
+                }
+            }
+
+            try {
+                subDirContext.modifyAttributes(returnedUserEntry, DirContext.REMOVE_ATTRIBUTE, attributesToBeDeleted);
+            } catch (Exception e) {
+                if (!StringUtils
+                        .equals("error code 16 - NO_SUCH_ATTRIBUTE", (e.getMessage()).split(":")[1].trim())) {
+                    handleException(e, userName);
+                }
+            }
+
+            subDirContext.modifyAttributes(returnedUserEntry, DirContext.REPLACE_ATTRIBUTE, attributesToBeReplaced);
 
         } catch (Exception e) {
             handleException(e, userName);
@@ -2359,8 +2457,75 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
 
     private static void setAdvancedProperty(String name, String displayName, String value,
                                             String description) {
+
         Property property = new Property(name, value, displayName + "#" + description, null);
         RW_LDAP_UM_ADVANCED_PROPERTIES.add(property);
 
+    }
+
+    private Attributes getUpdatedAttributes(String userName, Map<String, String> claims)
+            throws org.wso2.carbon.user.api.UserStoreException {
+
+        Attributes updatedAttributes = new BasicAttributes(true);
+        Map<String, String> attributeValueMap = new HashMap<>();
+
+        for (Map.Entry<String, String> claimEntry : claims.entrySet()) {
+            attributeValueMap.put(getClaimAtrribute(claimEntry.getKey(), userName, null),
+                    claimEntry.getValue());
+        }
+
+        processAttributesBeforeUpdate(attributeValueMap);
+
+        for (Map.Entry<String, String> claimEntry : attributeValueMap.entrySet()) {
+            String attributeName = claimEntry.getKey();
+            // If there is no attribute for profile configuration in LDAP,skip updating it.
+            if (attributeName.equals(UserCoreConstants.PROFILE_CONFIGURATION)) {
+                continue;
+            }
+
+            // Remove user DN from cache if changing username attribute.
+            if (realmConfig.getUserStoreProperty(LDAPConstants.USER_NAME_ATTRIBUTE).equals
+                    (attributeName)) {
+                removeFromUserCache(userName);
+            }
+            // If uid attribute value contains domain name, remove domain name.
+            if (attributeName.equals("uid")) {
+                // If user name contains domain name, remove domain name.
+                String uidName = claimEntry.getValue();
+                String[] uidNames = uidName.split(CarbonConstants.DOMAIN_SEPARATOR);
+                if (uidNames.length > 1) {
+                    uidName = uidNames[1];
+                    claimEntry.setValue(uidName);
+                }
+            }
+            Attribute currentUpdatedAttribute = new BasicAttribute(attributeName);
+            // If updated attribute value is null, remove its values.
+            if (EMPTY_ATTRIBUTE_STRING.equals(claimEntry.getValue())) {
+                currentUpdatedAttribute.clear();
+            } else {
+                String userAttributeSeparator = ",";
+                if (claimEntry.getValue() != null && !attributeName.equals("uid")
+                        && !attributeName.equals("sn")) {
+                    String claimSeparator = realmConfig.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR);
+                    if (claimSeparator != null && !claimSeparator.trim().isEmpty()) {
+                        userAttributeSeparator = claimSeparator;
+                    }
+                    if (claimEntry.getValue().contains(userAttributeSeparator)) {
+                        String[] claimValues = claimEntry.getValue().split(Pattern.quote(userAttributeSeparator));
+                        for (String claimValue : claimValues) {
+                            if (claimValue != null && claimValue.trim().length() > 0) {
+                                currentUpdatedAttribute.add(claimValue);
+                            }
+                        }
+                    } else {
+                        currentUpdatedAttribute.add(claimEntry.getValue());
+                    }
+                } else {
+                    currentUpdatedAttribute.add(claimEntry.getValue());
+                }
+            }
+            updatedAttributes.put(currentUpdatedAttribute);
+        }
+        return updatedAttributes;
     }
 }

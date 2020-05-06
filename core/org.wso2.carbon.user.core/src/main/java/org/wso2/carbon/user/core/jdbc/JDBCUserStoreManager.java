@@ -27,6 +27,7 @@ import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.user.api.Properties;
 import org.wso2.carbon.user.api.Property;
 import org.wso2.carbon.user.api.RealmConfiguration;
+import org.wso2.carbon.user.core.NotImplementedException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreException;
@@ -2320,6 +2321,15 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
         } finally {
             DatabaseUtil.closeAllConnections(dbConnection);
         }
+    }
+
+    @Override
+    protected void doSetUserClaimValues(String userName, Map<String, String> multiValuedClaimsToAdd,
+                                        Map<String, String> multiValuedClaimsToDelete,
+                                        Map<String, String> claimsExcludingMultiValuedClaims, String profileName)
+            throws NotImplementedException {
+
+        throw new NotImplementedException("This functionality is not yet implemented for JDBC userstores.");
     }
 
     /**
