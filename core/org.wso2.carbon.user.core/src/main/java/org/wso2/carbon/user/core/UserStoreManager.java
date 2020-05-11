@@ -241,22 +241,6 @@ public interface UserStoreManager extends org.wso2.carbon.user.api.UserStoreMana
             throws UserStoreException;
 
     /**
-     * Set many user claims and update multi-valued user claim values separately.
-     *
-     * @param userName                         The user name.
-     * @param multiValuedClaimsToAdd           Multi-valued claims to be modified by adding values.
-     * @param multiValuedClaimsToDelete        Multi-valued claims to be modified by deleting values.
-     * @param claimsExcludingMultiValuedClaims Claims to be modified excluding multi-valued claims.
-     * @param profileName                      The profile name, can be null. If null the default profile is considered.
-     * @throws UserStoreException      User Store exception.
-     * @throws NotImplementedException Functionality is not implemented exception.
-     */
-    void setUserClaimValues(String userName, Map<String, String> multiValuedClaimsToAdd,
-                            Map<String, String> multiValuedClaimsToDelete,
-                            Map<String, String> claimsExcludingMultiValuedClaims, String profileName)
-            throws UserStoreException, NotImplementedException;
-
-    /**
      * Delete a single user claim value
      *
      * @param userName    The user name

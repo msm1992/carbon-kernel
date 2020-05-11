@@ -968,8 +968,9 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
      * @param userName                         Username of the user.
      * @param multiValuedClaimsToAdd           Map of multi-valued claim URIs against values to be added.
      * @param multiValuedClaimsToDelete        Map of multi-valued claim URIs against values to be deleted.
-     * @param multiValuedClaimsToDelete        Map of claim URIs excluding multi-valued claims against values to be modified.
-     * @param claimsExcludingMultiValuedClaims The profile name, can be null. If null the default profile is considered.
+     * @param claimsExcludingMultiValuedClaims Map of claim URIs excluding multi-valued claims against values
+     *                                         to be modified.
+     * @param profileName                      The profile name, can be null. If null the default profile is considered.
      * @throws UserStoreException      An unexpected exception has occurred.
      * @throws NotImplementedException Functionality is not implemented exception.
      */

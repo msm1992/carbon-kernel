@@ -2560,8 +2560,9 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
 
         UserStore userStore = getUserStore(userName);
         if (userStore.isRecurssive()) {
-            userStore.getUserStoreManager().setUserClaimValues(userStore.getDomainFreeName(), multiValuedClaimsToAdd,
-                    multiValuedClaimsToDelete, claimsExcludingMultiValuedClaims, profileName);
+            ((AbstractUserStoreManager) (userStore.getUserStoreManager()))
+                    .setUserClaimValues(userStore.getDomainFreeName(), multiValuedClaimsToAdd,
+                            multiValuedClaimsToDelete, claimsExcludingMultiValuedClaims, profileName);
             return;
         }
 
