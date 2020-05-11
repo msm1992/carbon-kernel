@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.user.api;
 
+/**
+ * If the requested functionality is not supported yet, this error is thrown.
+ */
 public class NotImplementedException extends UserStoreException {
 
     public NotImplementedException(String message) {

@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.user.core;
 
+/**
+ * If the requested functionality is not supported yet, this error is thrown.
+ */
 public class NotImplementedException extends org.wso2.carbon.user.api.NotImplementedException {
 
     public NotImplementedException(String message) {
