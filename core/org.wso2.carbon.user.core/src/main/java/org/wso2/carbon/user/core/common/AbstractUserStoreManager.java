@@ -18,6 +18,7 @@
 package org.wso2.carbon.user.core.common;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -2559,35 +2560,39 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         claims.putAll(claimsExcludingMultiValuedClaims);
         String separator = ",";
         // Get modified claim values for multi-valued claims.
-        for (String claimURI : multiValuedClaimsToAdd.keySet()) {
-            StringBuilder modifiedValue = new StringBuilder();
-            if (oldClaimList.containsKey(claimURI)) {
-                modifiedValue.append(oldClaimList.get(claimURI)).append(separator)
-                        .append(multiValuedClaimsToAdd.get(claimURI));
-            } else {
-                modifiedValue.append(multiValuedClaimsToAdd.get(claimURI));
-            }
-            claims.put(claimURI, String.valueOf(modifiedValue));
-        }
-        for (String claimURI : multiValuedClaimsToDelete.keySet()) {
-            List<String> values = null;
-            if (claims.containsKey(claimURI)) {
-                values = Arrays.asList(claims.get(claimURI).split(","));
-            } else if (oldClaimList.containsKey(claimURI)) {
-                values = Arrays.asList(oldClaimList.get(claimURI).split(","));
-            }
-
-            StringBuilder modifiedValue = new StringBuilder();
-            separator = "";
-            if (!CollectionUtils.isEmpty(values)) {
-                for (String value : values) {
-                    if (!value.equals(multiValuedClaimsToDelete.get(claimURI))) {
-                        modifiedValue.append(separator).append(value);
-                    }
-                    separator = ",";
+        if (MapUtils.isNotEmpty(multiValuedClaimsToAdd)) {
+            for (String claimURI : multiValuedClaimsToAdd.keySet()) {
+                StringBuilder modifiedValue = new StringBuilder();
+                if (oldClaimList.containsKey(claimURI)) {
+                    modifiedValue.append(oldClaimList.get(claimURI)).append(separator)
+                            .append(multiValuedClaimsToAdd.get(claimURI));
+                } else {
+                    modifiedValue.append(multiValuedClaimsToAdd.get(claimURI));
                 }
+                claims.put(claimURI, String.valueOf(modifiedValue));
             }
-            claims.put(claimURI, String.valueOf(modifiedValue));
+        }
+        if (MapUtils.isNotEmpty(multiValuedClaimsToDelete)) {
+            for (String claimURI : multiValuedClaimsToDelete.keySet()) {
+                List<String> values = null;
+                if (claims.containsKey(claimURI)) {
+                    values = Arrays.asList(claims.get(claimURI).split(","));
+                } else if (oldClaimList.containsKey(claimURI)) {
+                    values = Arrays.asList(oldClaimList.get(claimURI).split(","));
+                }
+
+                StringBuilder modifiedValue = new StringBuilder();
+                separator = "";
+                if (!CollectionUtils.isEmpty(values)) {
+                    for (String value : values) {
+                        if (!value.equals(multiValuedClaimsToDelete.get(claimURI))) {
+                            modifiedValue.append(separator).append(value);
+                        }
+                        separator = ",";
+                    }
+                }
+                claims.put(claimURI, String.valueOf(modifiedValue));
+            }
         }
 
         UserStore userStore = getUserStore(userName);
