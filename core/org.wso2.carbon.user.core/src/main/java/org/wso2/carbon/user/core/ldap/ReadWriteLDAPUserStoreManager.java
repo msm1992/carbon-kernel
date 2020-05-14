@@ -963,7 +963,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
 
     /**
      * This implements the functionality of adding and removing multi valued user's profile information
-     * and updating user's other profile information separately in LDAP user store.
+     * and updating user's other profile information independently in LDAP user store.
      *
      * @param userName                         Username of the user.
      * @param multiValuedClaimsToAdd           Map of multi-valued claim URIs against values to be added.
