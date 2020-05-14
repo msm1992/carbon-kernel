@@ -2650,7 +2650,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                         claimsExcludingMultiValuedClaims, profileName);
             }
         } catch (NotImplementedException e) {
-            throw e;
+            setUserClaimValues(userName, claims, profileName);
         } catch (UserStoreException e) {
             handleSetUserClaimValuesFailure(ErrorMessages.ERROR_CODE_ERROR_WHILE_SETTING_USER_CLAIM_VALUES.getCode(),
                     String.format(ErrorMessages.ERROR_CODE_ERROR_WHILE_SETTING_USER_CLAIM_VALUES.getMessage(),
