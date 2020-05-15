@@ -23,10 +23,10 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.user.api.NotImplementedException;
 import org.wso2.carbon.user.api.Properties;
 import org.wso2.carbon.user.api.Property;
 import org.wso2.carbon.user.api.RealmConfiguration;
-import org.wso2.carbon.user.core.NotImplementedException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreConfigConstants;
@@ -885,7 +885,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
         }
         try {
             Attributes updatedAttributes = new BasicAttributes(true);
-            Map<String, String> attributeValueMap = new HashMap<>();
+            Map<String, Object> attributeValueMap = new HashMap<>();
 
             for (Map.Entry<String, String> claimEntry : claims.entrySet()) {
                 attributeValueMap.put(getClaimAtrribute(claimEntry.getKey(), userName, null),
@@ -894,7 +894,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
 
             processAttributesBeforeUpdate(attributeValueMap);
 
-            for (Map.Entry<String, String> claimEntry : attributeValueMap.entrySet()) {
+            for (Map.Entry<String, Object> claimEntry : attributeValueMap.entrySet()) {
                 String attributeName = claimEntry.getKey();
                 // if there is no attribute for profile configuration in LDAP,
                 // skip updating it.
@@ -910,7 +910,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                 // name
                 if (attributeName.equals("uid")) {
                     // if user name contains domain name, remove domain name
-                    String uidName = claimEntry.getValue();
+                    String uidName = (String) claimEntry.getValue();
                     String[] uidNames = uidName.split(CarbonConstants.DOMAIN_SEPARATOR);
                     if (uidNames.length > 1) {
                         uidName = uidNames[1];
@@ -920,18 +920,19 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                 }
                 Attribute currentUpdatedAttribute = new BasicAttribute(attributeName);
                 /* if updated attribute value is null, remove its values. */
-                if (EMPTY_ATTRIBUTE_STRING.equals(claimEntry.getValue())) {
+                if (EMPTY_ATTRIBUTE_STRING.equals((String) claimEntry.getValue())) {
                     currentUpdatedAttribute.clear();
                 } else {
                     String userAttributeSeparator = ",";
-                    if (claimEntry.getValue() != null && !attributeName.equals("uid")
+                    if ((String) claimEntry.getValue() != null && !attributeName.equals("uid")
                             && !attributeName.equals("sn")) {
                         String claimSeparator = realmConfig.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR);
                         if (claimSeparator != null && !claimSeparator.trim().isEmpty()) {
                             userAttributeSeparator = claimSeparator;
                         }
-                        if (claimEntry.getValue().contains(userAttributeSeparator)) {
-                            String[] claimValues = claimEntry.getValue().split(Pattern.quote(userAttributeSeparator));
+                        if (((String) claimEntry.getValue()).contains(userAttributeSeparator)) {
+                            String[] claimValues =
+                                    ((String) claimEntry.getValue()).split(Pattern.quote(userAttributeSeparator));
                             for (String claimValue : claimValues) {
                                 if (claimValue != null && claimValue.trim().length() > 0) {
                                     currentUpdatedAttribute.add(claimValue);
@@ -975,9 +976,9 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
      * @throws NotImplementedException Functionality is not implemented exception.
      */
     @Override
-    public void doSetUserClaimValues(String userName, Map<String, String> multiValuedClaimsToAdd,
-                                     Map<String, String> multiValuedClaimsToDelete,
-                                     Map<String, String> claimsExcludingMultiValuedClaims, String profileName)
+    public void doSetUserClaimValues(String userName, Map<String, List<String>> multiValuedClaimsToAdd,
+                                     Map<String, List<String>> multiValuedClaimsToDelete,
+                                     Map<String, List<String>> claimsExcludingMultiValuedClaims, String profileName)
             throws UserStoreException, NotImplementedException {
 
         // Get the LDAP Directory context.
@@ -2464,20 +2465,20 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
 
     }
 
-    private Attributes getUpdatedAttributes(String userName, Map<String, String> claims)
+    private Attributes getUpdatedAttributes(String userName, Map<String, List<String>> claims)
             throws org.wso2.carbon.user.api.UserStoreException {
 
         Attributes updatedAttributes = new BasicAttributes(true);
-        Map<String, String> attributeValueMap = new HashMap<>();
+        Map<String, Object> attributeValueMap = new HashMap<>();
 
-        for (Map.Entry<String, String> claimEntry : claims.entrySet()) {
+        for (Map.Entry<String, List<String>> claimEntry : claims.entrySet()) {
             attributeValueMap.put(getClaimAtrribute(claimEntry.getKey(), userName, null),
                     claimEntry.getValue());
         }
 
         processAttributesBeforeUpdate(attributeValueMap);
 
-        for (Map.Entry<String, String> claimEntry : attributeValueMap.entrySet()) {
+        for (Map.Entry<String, Object> claimEntry : attributeValueMap.entrySet()) {
             String attributeName = claimEntry.getKey();
             // If there is no attribute for profile configuration in LDAP,skip updating it.
             if (attributeName.equals(UserCoreConstants.PROFILE_CONFIGURATION)) {
@@ -2492,7 +2493,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             // If uid attribute value contains domain name, remove domain name.
             if (attributeName.equals("uid")) {
                 // If user name contains domain name, remove domain name.
-                String uidName = claimEntry.getValue();
+                String uidName = ((List<String>) claimEntry.getValue()).get(0);
                 String[] uidNames = uidName.split(CarbonConstants.DOMAIN_SEPARATOR);
                 if (uidNames.length > 1) {
                     uidName = uidNames[1];
@@ -2501,28 +2502,13 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             }
             Attribute currentUpdatedAttribute = new BasicAttribute(attributeName);
             // If updated attribute value is null, remove its values.
-            if (EMPTY_ATTRIBUTE_STRING.equals(claimEntry.getValue())) {
+            if (EMPTY_ATTRIBUTE_STRING.equals(((List<String>) claimEntry.getValue()).get(0))) {
                 currentUpdatedAttribute.clear();
             } else {
-                String userAttributeSeparator = ",";
-                if (claimEntry.getValue() != null && !attributeName.equals("uid")
-                        && !attributeName.equals("sn")) {
-                    String claimSeparator = realmConfig.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR);
-                    if (claimSeparator != null && !claimSeparator.trim().isEmpty()) {
-                        userAttributeSeparator = claimSeparator;
+                for (String claimValue : (List<String>) claimEntry.getValue()) {
+                    if (claimValue != null && claimValue.trim().length() > 0) {
+                        currentUpdatedAttribute.add(claimValue);
                     }
-                    if (claimEntry.getValue().contains(userAttributeSeparator)) {
-                        String[] claimValues = claimEntry.getValue().split(Pattern.quote(userAttributeSeparator));
-                        for (String claimValue : claimValues) {
-                            if (claimValue != null && claimValue.trim().length() > 0) {
-                                currentUpdatedAttribute.add(claimValue);
-                            }
-                        }
-                    } else {
-                        currentUpdatedAttribute.add(claimEntry.getValue());
-                    }
-                } else {
-                    currentUpdatedAttribute.add(claimEntry.getValue());
                 }
             }
             updatedAttributes.put(currentUpdatedAttribute);

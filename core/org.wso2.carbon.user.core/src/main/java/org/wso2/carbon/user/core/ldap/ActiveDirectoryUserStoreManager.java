@@ -22,10 +22,10 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.user.api.NotImplementedException;
 import org.wso2.carbon.user.api.Properties;
 import org.wso2.carbon.user.api.Property;
 import org.wso2.carbon.user.api.RealmConfiguration;
-import org.wso2.carbon.user.core.NotImplementedException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreConfigConstants;
@@ -45,6 +45,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -237,7 +238,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
                                  String userName) throws UserStoreException {
         if (claims != null) {
             BasicAttribute claim;
-            Map<String, String> userStoreProperties = new HashMap<>();
+            Map<String, Object> userStoreProperties = new HashMap<>();
 
             for (Map.Entry<String, String> entry : claims.entrySet()) {
                 // avoid attributes with empty values
@@ -268,7 +269,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
 
             processAttributesBeforeUpdate(userStoreProperties);
 
-            for (Map.Entry<String, String> entry : userStoreProperties.entrySet()) {
+            for (Map.Entry<String, Object> entry : userStoreProperties.entrySet()) {
                 claim = new BasicAttribute(entry.getKey());
                 claim.add(entry.getValue());
                 if (logger.isDebugEnabled()) {
@@ -559,7 +560,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
 
         try {
             Attributes updatedAttributes = new BasicAttributes(true);
-            Map<String, String> userStoreProperties = new HashMap<>();
+            Map<String, Object> userStoreProperties = new HashMap<>();
 
             for (Map.Entry<String, String> claimEntry : claims.entrySet()) {
                 userStoreProperties.put(getClaimAtrribute(claimEntry.getKey(), userName, null),
@@ -568,7 +569,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
 
             processAttributesBeforeUpdate(userStoreProperties);
 
-            for (Map.Entry<String, String> claimEntry : userStoreProperties.entrySet()) {
+            for (Map.Entry<String, Object> claimEntry : userStoreProperties.entrySet()) {
                 String attributeName = claimEntry.getKey();
                 // if there is no attribute for profile configuration in LDAP,
                 // skip updating it.
@@ -585,12 +586,12 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
                 // it should be an object rename
                 if ("CN".toLowerCase().equals(attributeName.toLowerCase())) {
                     cnModified = true;
-                    cnValue = claimEntry.getValue();
+                    cnValue = (String) claimEntry.getValue();
                     continue;
                 }
                 Attribute currentUpdatedAttribute = new BasicAttribute(attributeName);
 				/* if updated attribute value is null, remove its values. */
-                if (EMPTY_ATTRIBUTE_STRING.equals(claimEntry.getValue())) {
+                if (EMPTY_ATTRIBUTE_STRING.equals((String) claimEntry.getValue())) {
                     currentUpdatedAttribute.clear();
                 } else {
                     if (claimEntry.getValue() != null) {
@@ -598,8 +599,9 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
                         if (claimSeparator != null && !claimSeparator.trim().isEmpty()) {
                             userAttributeSeparator = claimSeparator;
                         }
-                        if (claimEntry.getValue().contains(userAttributeSeparator)) {
-                            StringTokenizer st = new StringTokenizer(claimEntry.getValue(), userAttributeSeparator);
+                        if (((String) claimEntry.getValue()).contains(userAttributeSeparator)) {
+                            StringTokenizer st =
+                                    new StringTokenizer((String) claimEntry.getValue(), userAttributeSeparator);
                             while (st.hasMoreElements()) {
                                 String newVal = st.nextElement().toString();
                                 if (newVal != null && newVal.trim().length() > 0) {
@@ -636,9 +638,9 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
     }
 
     @Override
-    public void doSetUserClaimValues(String userName, Map<String, String> multiValuedClaimsToAdd,
-                                     Map<String, String> multiValuedClaimsToDelete,
-                                     Map<String, String> claimsExcludingMultiValuedClaims,
+    public void doSetUserClaimValues(String userName, Map<String, List<String>> multiValuedClaimsToAdd,
+                                     Map<String, List<String>> multiValuedClaimsToDelete,
+                                     Map<String, List<String>> claimsExcludingMultiValuedClaims,
                                      String profileName) throws NotImplementedException {
 
         throw new NotImplementedException("This functionality is not yet implemented for Active Directory userstores.");
@@ -649,7 +651,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
 
         try {
             String attributeName = getClaimAtrribute(claimURI, userName, null);
-            Map<String, String> userStoreAttributeValueMap = new HashMap<>();
+            Map<String, Object> userStoreAttributeValueMap = new HashMap<>();
             userStoreAttributeValueMap.put(attributeName, value);
 
             // Exclude the immutable attributes.
@@ -1004,7 +1006,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
     }
 
     @Override
-    protected void processAttributesBeforeUpdate(Map<String, String> userStorePropertyValues) {
+    protected void processAttributesBeforeUpdate(Map<String, Object> userStorePropertyValues) {
 
         String immutableAttributesProperty = realmConfig
                 .getUserStoreProperty(UserStoreConfigConstants.immutableAttributes);

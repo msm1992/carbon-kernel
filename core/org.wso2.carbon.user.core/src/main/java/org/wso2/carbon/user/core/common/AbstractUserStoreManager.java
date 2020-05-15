@@ -25,8 +25,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.user.api.NotImplementedException;
 import org.wso2.carbon.user.api.RealmConfiguration;
-import org.wso2.carbon.user.core.NotImplementedException;
 import org.wso2.carbon.user.core.PaginatedUserStoreManager;
 import org.wso2.carbon.user.core.Permission;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -327,9 +327,9 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
      * @throws UserStoreException      An unexpected exception has occurred.
      * @throws NotImplementedException Functionality is not implemented exception.
      */
-    protected abstract void doSetUserClaimValues(String userName, Map<String, String> multiValuedClaimsToAdd,
-                                                 Map<String, String> multiValuedClaimsToDelete,
-                                                 Map<String, String> claimsExcludingMultiValuedClaims,
+    protected abstract void doSetUserClaimValues(String userName, Map<String, List<String>> multiValuedClaimsToAdd,
+                                                 Map<String, List<String>> multiValuedClaimsToDelete,
+                                                 Map<String, List<String>> claimsExcludingMultiValuedClaims,
                                                  String profileName)
             throws UserStoreException, NotImplementedException;
 
@@ -2550,55 +2550,57 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
     /**
      * {@inheritDoc}
      */
-    public final void setUserClaimValues(String userName, Map<String, String> oldClaimList,
-                                         Map<String, String> multiValuedClaimsToAdd,
-                                         Map<String, String> multiValuedClaimsToDelete,
-                                         Map<String, String> claimsExcludingMultiValuedClaims, String profileName)
+    public final void setUserClaimValues(String userName, Map<String, List<String>> oldClaimMap,
+                                         Map<String, List<String>> multiValuedClaimsToAdd,
+                                         Map<String, List<String>> multiValuedClaimsToDelete,
+                                         Map<String, List<String>> claimsExcludingMultiValuedClaims, String profileName)
             throws UserStoreException, NotImplementedException {
 
         Map<String, String> claims = new HashMap<>();
-        claims.putAll(claimsExcludingMultiValuedClaims);
         String separator = ",";
+        if (StringUtils.isNotEmpty(realmConfig.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR))) {
+            separator = realmConfig.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR);
+        }
+        if (MapUtils.isNotEmpty(claimsExcludingMultiValuedClaims)) {
+            for (String claimURI : claimsExcludingMultiValuedClaims.keySet()) {
+                claims.put(claimURI,
+                        StringUtils.join(claimsExcludingMultiValuedClaims.get(claimURI).iterator(), separator));
+            }
+        }
+
         // Get modified claim values for multi-valued claims.
         if (MapUtils.isNotEmpty(multiValuedClaimsToAdd)) {
             for (String claimURI : multiValuedClaimsToAdd.keySet()) {
-                StringBuilder modifiedValue = new StringBuilder();
-                if (oldClaimList.containsKey(claimURI)) {
-                    modifiedValue.append(oldClaimList.get(claimURI)).append(separator)
-                            .append(multiValuedClaimsToAdd.get(claimURI));
+                List<String> modifiedValue = new ArrayList<>();
+                if (oldClaimMap.containsKey(claimURI)) {
+                    modifiedValue.addAll(oldClaimMap.get(claimURI));
+                    modifiedValue.addAll(multiValuedClaimsToAdd.get(claimURI));
                 } else {
-                    modifiedValue.append(multiValuedClaimsToAdd.get(claimURI));
+                    modifiedValue.addAll(multiValuedClaimsToAdd.get(claimURI));
                 }
-                claims.put(claimURI, String.valueOf(modifiedValue));
+                claims.put(claimURI, StringUtils.join(modifiedValue.iterator(), separator));
             }
         }
         if (MapUtils.isNotEmpty(multiValuedClaimsToDelete)) {
             for (String claimURI : multiValuedClaimsToDelete.keySet()) {
                 List<String> values = null;
                 if (claims.containsKey(claimURI)) {
-                    values = Arrays.asList(claims.get(claimURI).split(","));
-                } else if (oldClaimList.containsKey(claimURI)) {
-                    values = Arrays.asList(oldClaimList.get(claimURI).split(","));
+                    values = Arrays.asList(claims.get(claimURI).split(separator));
+                } else if (oldClaimMap.containsKey(claimURI)) {
+                    values = oldClaimMap.get(claimURI);
                 }
-
-                StringBuilder modifiedValue = new StringBuilder();
-                separator = "";
                 if (!CollectionUtils.isEmpty(values)) {
-                    for (String value : values) {
-                        if (!value.equals(multiValuedClaimsToDelete.get(claimURI))) {
-                            modifiedValue.append(separator).append(value);
-                        }
-                        separator = ",";
-                    }
+                    List<String> modifiedValue =
+                            (List<String>) CollectionUtils.subtract(values, multiValuedClaimsToDelete.get(claimURI));
+                    claims.put(claimURI, StringUtils.join(modifiedValue.iterator(), separator));
                 }
-                claims.put(claimURI, String.valueOf(modifiedValue));
             }
         }
 
         UserStore userStore = getUserStore(userName);
         if (userStore.isRecurssive()) {
             ((AbstractUserStoreManager) (userStore.getUserStoreManager()))
-                    .setUserClaimValues(userStore.getDomainFreeName(), oldClaimList, multiValuedClaimsToAdd,
+                    .setUserClaimValues(userStore.getDomainFreeName(), oldClaimMap, multiValuedClaimsToAdd,
                             multiValuedClaimsToDelete, claimsExcludingMultiValuedClaims, profileName);
             return;
         }
@@ -2644,7 +2646,11 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         }
 
         // Any additional simple claim modied due to pre listeners are taken into claimsExcludingMultiValuedClaims map.
-        claimsExcludingMultiValuedClaims.putAll(claims);
+        if (claimsExcludingMultiValuedClaims != null) {
+            for (Map.Entry<String, String> claim : claims.entrySet()) {
+                claimsExcludingMultiValuedClaims.put(claim.getKey(), Arrays.asList(claim.getValue().split(separator)));
+            }
+        }
         (claimsExcludingMultiValuedClaims.keySet()).removeAll(multiValuedClaimsToAdd.keySet());
         (claimsExcludingMultiValuedClaims.keySet()).removeAll(multiValuedClaimsToDelete.keySet());
 
@@ -5607,7 +5613,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
      * @param userStoreProperties un-processed map (userstore attribute name -> attribute value) of user store
      *                            attribute values
      */
-    protected void processAttributesBeforeUpdate(Map<String, String> userStoreProperties) {
+    protected void processAttributesBeforeUpdate(Map<String, Object> userStoreProperties) {
 
         // Not implemented.
     }
