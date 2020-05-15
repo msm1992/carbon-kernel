@@ -2556,12 +2556,20 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                                          Map<String, List<String>> claimsExcludingMultiValuedClaims, String profileName)
             throws UserStoreException, NotImplementedException {
 
+        UserStore userStore = getUserStore(userName);
+        if (userStore.isRecurssive()) {
+            ((AbstractUserStoreManager) (userStore.getUserStoreManager()))
+                    .setUserClaimValues(userStore.getDomainFreeName(), oldClaimMap, multiValuedClaimsToAdd,
+                            multiValuedClaimsToDelete, claimsExcludingMultiValuedClaims, profileName);
+            return;
+        }
+
         Map<String, String> claims = new HashMap<>();
         String separator = ",";
         if (StringUtils.isNotEmpty(realmConfig.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR))) {
             separator = realmConfig.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR);
         }
-        if (MapUtils.isNotEmpty(claimsExcludingMultiValuedClaims)) {
+        if (claimsExcludingMultiValuedClaims != null) {
             for (String claimURI : claimsExcludingMultiValuedClaims.keySet()) {
                 claims.put(claimURI,
                         StringUtils.join(claimsExcludingMultiValuedClaims.get(claimURI).iterator(), separator));
@@ -2569,7 +2577,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         }
 
         // Get modified claim values for multi-valued claims.
-        if (MapUtils.isNotEmpty(multiValuedClaimsToAdd)) {
+        if (multiValuedClaimsToAdd != null) {
             for (String claimURI : multiValuedClaimsToAdd.keySet()) {
                 List<String> modifiedValue = new ArrayList<>();
                 if (oldClaimMap.containsKey(claimURI)) {
@@ -2581,7 +2589,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                 claims.put(claimURI, StringUtils.join(modifiedValue.iterator(), separator));
             }
         }
-        if (MapUtils.isNotEmpty(multiValuedClaimsToDelete)) {
+        if (multiValuedClaimsToDelete != null) {
             for (String claimURI : multiValuedClaimsToDelete.keySet()) {
                 List<String> values = null;
                 if (claims.containsKey(claimURI)) {
@@ -2595,14 +2603,6 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                     claims.put(claimURI, StringUtils.join(modifiedValue.iterator(), separator));
                 }
             }
-        }
-
-        UserStore userStore = getUserStore(userName);
-        if (userStore.isRecurssive()) {
-            ((AbstractUserStoreManager) (userStore.getUserStoreManager()))
-                    .setUserClaimValues(userStore.getDomainFreeName(), oldClaimMap, multiValuedClaimsToAdd,
-                            multiValuedClaimsToDelete, claimsExcludingMultiValuedClaims, profileName);
-            return;
         }
 
         // #################### Domain Name Free Zone Starts Here ################################
