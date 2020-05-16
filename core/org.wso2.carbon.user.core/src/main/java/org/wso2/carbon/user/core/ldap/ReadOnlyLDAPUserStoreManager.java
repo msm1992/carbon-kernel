@@ -28,6 +28,7 @@ import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.caching.impl.CachingConstants;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.user.api.NotImplementedException;
 import org.wso2.carbon.user.api.Properties;
 import org.wso2.carbon.user.api.Property;
 import org.wso2.carbon.user.api.RealmConfiguration;
@@ -3711,6 +3712,15 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
         throw new UserStoreException(
                 "User store is operating in read only mode. Cannot write into the user store.");
 
+    }
+
+    @Override
+    public void doSetUserClaimValues(String userName, Map<String, List<String>> multiValuedClaimsToAdd,
+                                     Map<String, List<String>> multiValuedClaimsToDelete,
+                                     Map<String, List<String>> claimsExcludingMultiValuedClaims, String profileName)
+            throws UserStoreException, NotImplementedException {
+
+        throw new UserStoreException("Userstore is operating in read only mode. Cannot write into the user store.");
     }
 
     /**

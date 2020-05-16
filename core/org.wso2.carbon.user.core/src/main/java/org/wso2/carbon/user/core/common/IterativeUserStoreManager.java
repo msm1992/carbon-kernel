@@ -18,11 +18,13 @@
  */
 package org.wso2.carbon.user.core.common;
 
+import org.wso2.carbon.user.api.NotImplementedException;
 import org.wso2.carbon.user.api.Properties;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.tenant.Tenant;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -134,6 +136,16 @@ public class IterativeUserStoreManager extends AbstractUserStoreManager {
     protected void doSetUserClaimValues(String userName, Map<String, String> claims, String profileName) throws UserStoreException {
 
         this.abstractUserStoreManager.doSetUserClaimValues(userName, claims, profileName);
+    }
+
+    @Override
+    protected void doSetUserClaimValues(String userName, Map<String, List<String>> multiValuedClaimsToAdd,
+                                        Map<String, List<String>> multiValuedClaimsToDelete,
+                                        Map<String, List<String>> claimsExcludingMultiValuedClaims, String profileName)
+            throws UserStoreException, NotImplementedException {
+
+        this.abstractUserStoreManager.doSetUserClaimValues(userName, multiValuedClaimsToAdd, multiValuedClaimsToDelete,
+                claimsExcludingMultiValuedClaims, profileName);
     }
 
     @Override

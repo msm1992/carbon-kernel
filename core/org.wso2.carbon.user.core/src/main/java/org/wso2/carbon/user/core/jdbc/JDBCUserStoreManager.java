@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.user.api.NotImplementedException;
 import org.wso2.carbon.user.api.Properties;
 import org.wso2.carbon.user.api.Property;
 import org.wso2.carbon.user.api.RealmConfiguration;
@@ -2254,7 +2255,7 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
             ArrayList<String> propertyListToUpdate = new ArrayList<>();
             Map<String, String> claimAttributeMap = new HashMap<>();
             Map<String, String> filteredClaimAttributeMap = new HashMap<>();
-            Map<String, String> attributeValueMap = new HashMap<>();
+            Map<String, Object> attributeValueMap = new HashMap<>();
             Iterator<Map.Entry<String, String>> ite = claims.entrySet().iterator();
 
             // Get the property names fo the claims
@@ -2320,6 +2321,15 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
         } finally {
             DatabaseUtil.closeAllConnections(dbConnection);
         }
+    }
+
+    @Override
+    protected void doSetUserClaimValues(String userName, Map<String, List<String>> multiValuedClaimsToAdd,
+                                        Map<String, List<String>> multiValuedClaimsToDelete,
+                                        Map<String, List<String>> claimsExcludingMultiValuedClaims, String profileName)
+            throws NotImplementedException {
+
+        throw new NotImplementedException("This functionality is not yet implemented for JDBC userstores.");
     }
 
     /**
