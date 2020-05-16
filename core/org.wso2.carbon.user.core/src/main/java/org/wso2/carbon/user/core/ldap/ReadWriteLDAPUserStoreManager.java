@@ -964,7 +964,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
 
     /**
      * This implements the functionality of adding and removing multi valued user's profile information
-     * and updating user's other profile information independently in LDAP user store.
+     * and updating user's other profile information independently in LDAP userstore.
      *
      * @param userName                         Username of the user.
      * @param multiValuedClaimsToAdd           Map of multi-valued claim URIs against values to be added.
@@ -984,15 +984,13 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
         // Get the LDAP Directory context.
         DirContext dirContext = this.connectionSource.getContext();
         DirContext subDirContext = null;
-        // Search the relevant user entry by user name.
+        // Search the relevant user entry by username.
         String userSearchBase = realmConfig.getUserStoreProperty(LDAPConstants.USER_SEARCH_BASE);
         String userSearchFilter = realmConfig
                 .getUserStoreProperty(LDAPConstants.USER_NAME_SEARCH_FILTER);
-        // If user name contains domain name, remove domain name.
-        String[] userNames = userName.split(CarbonConstants.DOMAIN_SEPARATOR);
-        if (userNames.length > 1) {
-            userName = userNames[1];
-        }
+        // If username contains domain name, remove domain name.
+        String domain = UserCoreUtil.extractDomainFromName(userName);
+        userName = UserCoreUtil.removeDomainFromName(userName);
         userSearchFilter = userSearchFilter.replace("?", escapeSpecialCharactersForFilter(userName));
 
         SearchControls searchControls = new SearchControls();
@@ -1009,9 +1007,10 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             if (returnedResultList.hasMore()) {
                 returnedUserEntry = returnedResultList.next().getName();
             }
-
         } catch (NamingException e) {
-            String errorMessage = "Results could not be retrieved from the directory context for user : " + userName;
+            String errorMessage =
+                    String.format("Results could not be retrieved from the directory context for user : %s/%s",
+                            domain, userName);
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
@@ -1021,7 +1020,6 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
         }
 
         if (profileName == null) {
-
             profileName = UserCoreConstants.DEFAULT_PROFILE;
         }
 
@@ -1029,9 +1027,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             Attributes attributesToBeAdded = getUpdatedAttributes(userName, multiValuedClaimsToAdd);
             Attributes attributesToBeDeleted = getUpdatedAttributes(userName, multiValuedClaimsToDelete);
             Attributes attributesToBeReplaced = getUpdatedAttributes(userName, claimsExcludingMultiValuedClaims);
-
             subDirContext = (DirContext) dirContext.lookup(escapeDNForSearch(userSearchBase));
-
             try {
                 subDirContext.modifyAttributes(returnedUserEntry, DirContext.ADD_ATTRIBUTE, attributesToBeAdded);
             } catch (Exception e) {
@@ -1040,7 +1036,6 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                     handleException(e, userName);
                 }
             }
-
             try {
                 subDirContext.modifyAttributes(returnedUserEntry, DirContext.REMOVE_ATTRIBUTE, attributesToBeDeleted);
             } catch (Exception e) {
@@ -1049,9 +1044,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                     handleException(e, userName);
                 }
             }
-
             subDirContext.modifyAttributes(returnedUserEntry, DirContext.REPLACE_ATTRIBUTE, attributesToBeReplaced);
-
         } catch (Exception e) {
             handleException(e, userName);
         } finally {

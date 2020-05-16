@@ -2564,46 +2564,9 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
             return;
         }
 
-        Map<String, String> claims = new HashMap<>();
-        String separator = ",";
-        if (StringUtils.isNotEmpty(realmConfig.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR))) {
-            separator = realmConfig.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR);
-        }
-        if (claimsExcludingMultiValuedClaims != null) {
-            for (String claimURI : claimsExcludingMultiValuedClaims.keySet()) {
-                claims.put(claimURI,
-                        StringUtils.join(claimsExcludingMultiValuedClaims.get(claimURI).iterator(), separator));
-            }
-        }
-
-        // Get modified claim values for multi-valued claims.
-        if (multiValuedClaimsToAdd != null) {
-            for (String claimURI : multiValuedClaimsToAdd.keySet()) {
-                List<String> modifiedValue = new ArrayList<>();
-                if (oldClaimMap.containsKey(claimURI)) {
-                    modifiedValue.addAll(oldClaimMap.get(claimURI));
-                    modifiedValue.addAll(multiValuedClaimsToAdd.get(claimURI));
-                } else {
-                    modifiedValue.addAll(multiValuedClaimsToAdd.get(claimURI));
-                }
-                claims.put(claimURI, StringUtils.join(modifiedValue.iterator(), separator));
-            }
-        }
-        if (multiValuedClaimsToDelete != null) {
-            for (String claimURI : multiValuedClaimsToDelete.keySet()) {
-                List<String> values = null;
-                if (claims.containsKey(claimURI)) {
-                    values = Arrays.asList(claims.get(claimURI).split(separator));
-                } else if (oldClaimMap.containsKey(claimURI)) {
-                    values = oldClaimMap.get(claimURI);
-                }
-                if (!CollectionUtils.isEmpty(values)) {
-                    List<String> modifiedValue =
-                            (List<String>) CollectionUtils.subtract(values, multiValuedClaimsToDelete.get(claimURI));
-                    claims.put(claimURI, StringUtils.join(modifiedValue.iterator(), separator));
-                }
-            }
-        }
+        Map<String, String> claims =
+                getModifiedClaims(oldClaimMap, multiValuedClaimsToAdd, multiValuedClaimsToDelete,
+                        claimsExcludingMultiValuedClaims);
 
         // #################### Domain Name Free Zone Starts Here ################################
 
@@ -2614,31 +2577,12 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
             handleSetUserClaimValuesFailure(errorCode, errorMessage, userName, claims, profileName);
             throw new UserStoreException(errorCode + " - " + errorMessage);
         }
-        if (claims == null) {
-            claims = new HashMap<>();
-        }
-        // #################### <Listeners> #####################################################
-        try {
-            for (UserOperationEventListener listener : UMListenerServiceComponent.getUserOperationEventListeners()) {
-                if (!listener.doPreSetUserClaimValues(userName, claims, profileName, this)) {
-                    handleSetUserClaimValuesFailure(
-                            ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_SET_USER_CLAIM_VALUES.getCode(),
-                            String.format(ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_SET_USER_CLAIM_VALUES.getMessage(),
-                                    UserCoreErrorConstants.PRE_LISTENER_TASKS_FAILED_MESSAGE), userName, claims,
-                            profileName);
-                    return;
-                }
-            }
-        } catch (UserStoreException e) {
-            handleSetUserClaimValuesFailure(ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_SET_USER_CLAIM_VALUES.getCode(),
-                    String.format(ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_SET_USER_CLAIM_VALUES.getMessage(),
-                            e.getMessage()), userName, claims, profileName);
-            throw e;
-        }
-        // #################### </Listeners> #####################################################
+
+        // #################### <Pre Listeners> #####################################################
+        invokeDoPreSetUserClaimsListeners(userName, claims, profileName);
+        // #################### </Pre Listeners> #####################################################
 
         // If user store is readonly this method should not get invoked with non empty claim set.
-
         if (isReadOnly() && !claims.isEmpty()) {
             handleSetUserClaimValuesFailure(ErrorMessages.ERROR_CODE_READONLY_USER_STORE.getCode(),
                     ErrorMessages.ERROR_CODE_READONLY_USER_STORE.getMessage(), userName, claims, profileName);
@@ -2646,6 +2590,10 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         }
 
         // Any additional simple claim modied due to pre listeners are taken into claimsExcludingMultiValuedClaims map.
+        String separator = ",";
+        if (StringUtils.isNotEmpty(realmConfig.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR))) {
+            separator = realmConfig.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR);
+        }
         if (claimsExcludingMultiValuedClaims != null) {
             for (Map.Entry<String, String> claim : claims.entrySet()) {
                 claimsExcludingMultiValuedClaims.put(claim.getKey(), Arrays.asList(claim.getValue().split(separator)));
@@ -2654,7 +2602,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         (claimsExcludingMultiValuedClaims.keySet()).removeAll(multiValuedClaimsToAdd.keySet());
         (claimsExcludingMultiValuedClaims.keySet()).removeAll(multiValuedClaimsToDelete.keySet());
 
-        // Set claim values if user store is not read only.
+        // Set claim values if userstore is not read only.
         try {
             if (!isReadOnly()) {
                 doSetUserClaimValues(userName, multiValuedClaimsToAdd, multiValuedClaimsToDelete,
@@ -2669,25 +2617,9 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
             throw e;
         }
 
-        // #################### <Listeners> #####################################################
-        try {
-            for (UserOperationEventListener listener : UMListenerServiceComponent.getUserOperationEventListeners()) {
-                if (!listener.doPostSetUserClaimValues(userName, claims, profileName, this)) {
-                    handleSetUserClaimValuesFailure(
-                            ErrorMessages.ERROR_CODE_ERROR_DURING_POST_SET_USER_CLAIM_VALUES.getCode(),
-                            String.format(ErrorMessages.ERROR_CODE_ERROR_DURING_POST_SET_USER_CLAIM_VALUES.getMessage(),
-                                    UserCoreErrorConstants.POST_LISTENER_TASKS_FAILED_MESSAGE), userName, claims,
-                            profileName);
-                    return;
-                }
-            }
-        } catch (UserStoreException e) {
-            handleSetUserClaimValuesFailure(ErrorMessages.ERROR_CODE_ERROR_DURING_POST_SET_USER_CLAIM_VALUES.getCode(),
-                    String.format(ErrorMessages.ERROR_CODE_ERROR_DURING_POST_SET_USER_CLAIM_VALUES.getMessage(),
-                            e.getMessage()), userName, claims, profileName);
-            throw e;
-        }
-        // #################### </Listeners> #####################################################
+        // #################### <Post Listeners> #####################################################
+        invokeDoPostSetUserClaimsListeners(userName, claims, profileName);
+        // #################### </Post Listeners> #####################################################
     }
 
     /**
@@ -7297,5 +7229,110 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         }
         // Authenticate using the initial user store from the user store preference list.
         return initialUserStoreManager.authenticate(userName, credential);
+    }
+
+    /**
+     * Process and return the modifed claim values against claim URI. Add or remove specific claim values
+     * against old claim values of multi-valued claims. Replace old claim values from modified values for
+     * non multi-valued claims.
+     *
+     * @param oldClaimMap                      Map of claim URIs against old claim values of user.
+     * @param multiValuedClaimsToAdd           Map of multi-valued claim URIs against values need to be added to
+     *                                         old claim value.
+     * @param multiValuedClaimsToDelete        Map of multi-valued claim URIs against values need to be removed from
+     *                                         old claim value.
+     * @param claimsExcludingMultiValuedClaims Map of non multi-valued claim URIs against modified values to be stred.
+     * @return Map of claim URIs against the modified claim values.
+     */
+    private Map<String, String> getModifiedClaims(Map<String, List<String>> oldClaimMap,
+                                                  Map<String, List<String>> multiValuedClaimsToAdd,
+                                                  Map<String, List<String>> multiValuedClaimsToDelete,
+                                                  Map<String, List<String>> claimsExcludingMultiValuedClaims) {
+
+        Map<String, String> claims = new HashMap<>();
+        String separator = ",";
+        if (StringUtils.isNotEmpty(realmConfig.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR))) {
+            separator = realmConfig.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR);
+        }
+        if (claimsExcludingMultiValuedClaims != null) {
+            for (String claimURI : claimsExcludingMultiValuedClaims.keySet()) {
+                claims.put(claimURI,
+                        StringUtils.join(claimsExcludingMultiValuedClaims.get(claimURI).iterator(), separator));
+            }
+        }
+
+        // Get modified claim values for multi-valued claims.
+        if (multiValuedClaimsToAdd != null) {
+            for (String claimURI : multiValuedClaimsToAdd.keySet()) {
+                List<String> modifiedValue = new ArrayList<>();
+                if (oldClaimMap.containsKey(claimURI)) {
+                    modifiedValue.addAll(oldClaimMap.get(claimURI));
+                    modifiedValue.addAll(multiValuedClaimsToAdd.get(claimURI));
+                } else {
+                    modifiedValue.addAll(multiValuedClaimsToAdd.get(claimURI));
+                }
+                claims.put(claimURI, StringUtils.join(modifiedValue.iterator(), separator));
+            }
+        }
+        if (multiValuedClaimsToDelete != null) {
+            for (String claimURI : multiValuedClaimsToDelete.keySet()) {
+                List<String> values = null;
+                if (claims.containsKey(claimURI)) {
+                    values = Arrays.asList(claims.get(claimURI).split(separator));
+                } else if (oldClaimMap.containsKey(claimURI)) {
+                    values = oldClaimMap.get(claimURI);
+                }
+                if (!CollectionUtils.isEmpty(values)) {
+                    List<String> modifiedValue =
+                            (List<String>) CollectionUtils.subtract(values, multiValuedClaimsToDelete.get(claimURI));
+                    claims.put(claimURI, StringUtils.join(modifiedValue.iterator(), separator));
+                }
+            }
+        }
+        return claims;
+    }
+
+    private void invokeDoPreSetUserClaimsListeners(String userName, Map<String, String> claims, String profileName)
+            throws UserStoreException {
+
+        try {
+            for (UserOperationEventListener listener : UMListenerServiceComponent.getUserOperationEventListeners()) {
+                if (!listener.doPreSetUserClaimValues(userName, claims, profileName, this)) {
+                    handleSetUserClaimValuesFailure(
+                            ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_SET_USER_CLAIM_VALUES.getCode(),
+                            String.format(ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_SET_USER_CLAIM_VALUES.getMessage(),
+                                    UserCoreErrorConstants.PRE_LISTENER_TASKS_FAILED_MESSAGE), userName, claims,
+                            profileName);
+                    return;
+                }
+            }
+        } catch (UserStoreException e) {
+            handleSetUserClaimValuesFailure(ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_SET_USER_CLAIM_VALUES.getCode(),
+                    String.format(ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_SET_USER_CLAIM_VALUES.getMessage(),
+                            e.getMessage()), userName, claims, profileName);
+            throw e;
+        }
+    }
+
+    private void invokeDoPostSetUserClaimsListeners(String userName, Map<String, String> claims, String profileName)
+            throws UserStoreException {
+
+        try {
+            for (UserOperationEventListener listener : UMListenerServiceComponent.getUserOperationEventListeners()) {
+                if (!listener.doPostSetUserClaimValues(userName, claims, profileName, this)) {
+                    handleSetUserClaimValuesFailure(
+                            ErrorMessages.ERROR_CODE_ERROR_DURING_POST_SET_USER_CLAIM_VALUES.getCode(),
+                            String.format(ErrorMessages.ERROR_CODE_ERROR_DURING_POST_SET_USER_CLAIM_VALUES.getMessage(),
+                                    UserCoreErrorConstants.POST_LISTENER_TASKS_FAILED_MESSAGE), userName, claims,
+                            profileName);
+                    return;
+                }
+            }
+        } catch (UserStoreException e) {
+            handleSetUserClaimValuesFailure(ErrorMessages.ERROR_CODE_ERROR_DURING_POST_SET_USER_CLAIM_VALUES.getCode(),
+                    String.format(ErrorMessages.ERROR_CODE_ERROR_DURING_POST_SET_USER_CLAIM_VALUES.getMessage(),
+                            e.getMessage()), userName, claims, profileName);
+            throw e;
+        }
     }
 }

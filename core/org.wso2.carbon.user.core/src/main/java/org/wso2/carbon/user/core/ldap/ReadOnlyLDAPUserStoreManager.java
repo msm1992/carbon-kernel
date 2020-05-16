@@ -3720,7 +3720,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
                                      Map<String, List<String>> claimsExcludingMultiValuedClaims, String profileName)
             throws UserStoreException, NotImplementedException {
 
-        throw new UserStoreException("User store is operating in read only mode. Cannot write into the user store.");
+        throw new UserStoreException("Userstore is operating in read only mode. Cannot write into the user store.");
     }
 
     /**
