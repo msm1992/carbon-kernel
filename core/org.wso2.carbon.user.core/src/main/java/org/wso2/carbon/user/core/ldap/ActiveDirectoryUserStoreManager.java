@@ -267,7 +267,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
                 }
             }
 
-            processUserStoreAttributesBeforeUpdate(userStoreProperties);
+            processAttributesBeforeUpdate(userStoreProperties);
 
             for (Map.Entry<String, Object> entry : userStoreProperties.entrySet()) {
                 claim = new BasicAttribute(entry.getKey());
@@ -567,7 +567,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
                         claimEntry.getValue());
             }
 
-            processUserStoreAttributesBeforeUpdate(userStoreProperties);
+            processAttributesBeforeUpdate(userStoreProperties);
 
             for (Map.Entry<String, Object> claimEntry : userStoreProperties.entrySet()) {
                 String attributeName = claimEntry.getKey();
@@ -655,7 +655,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
             userStoreAttributeValueMap.put(attributeName, value);
 
             // Exclude the immutable attributes.
-            processUserStoreAttributesBeforeUpdate(userStoreAttributeValueMap);
+            processAttributesBeforeUpdate(userStoreAttributeValueMap);
 
             // For an immutable attribute the Map is empty.
             if (userStoreAttributeValueMap.isEmpty()) {
@@ -1006,7 +1006,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
     }
 
     @Override
-    protected void processUserStoreAttributesBeforeUpdate(Map<String, Object> userStorePropertyValues) {
+    protected void processAttributesBeforeUpdate(Map<String, ? extends Object> userStorePropertyValues) {
 
         String immutableAttributesProperty = realmConfig
                 .getUserStoreProperty(UserStoreConfigConstants.immutableAttributes);
