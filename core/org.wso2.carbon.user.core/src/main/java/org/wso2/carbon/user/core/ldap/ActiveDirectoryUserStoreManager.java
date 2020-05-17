@@ -1006,7 +1006,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
     }
 
     @Override
-    protected void processAttributesBeforeUpdate(Map<String, Object> userStorePropertyValues) {
+    protected void processAttributesBeforeUpdate(Map<String, ? extends Object> userStorePropertyValues) {
 
         String immutableAttributesProperty = realmConfig
                 .getUserStoreProperty(UserStoreConfigConstants.immutableAttributes);
