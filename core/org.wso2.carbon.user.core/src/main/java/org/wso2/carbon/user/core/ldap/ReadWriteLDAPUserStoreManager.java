@@ -892,7 +892,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                         claimEntry.getValue());
             }
 
-            processAttributesBeforeUpdate(attributeValueMap);
+            processUserStoreAttributesBeforeUpdate(attributeValueMap);
 
             for (Map.Entry<String, Object> claimEntry : attributeValueMap.entrySet()) {
                 String attributeName = claimEntry.getKey();
@@ -2469,7 +2469,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                     claimEntry.getValue());
         }
 
-        processAttributesBeforeUpdate(attributeValueMap);
+        processUserStoreAttributesBeforeUpdate(attributeValueMap);
 
         for (Map.Entry<String, Object> claimEntry : attributeValueMap.entrySet()) {
             String attributeName = claimEntry.getKey();

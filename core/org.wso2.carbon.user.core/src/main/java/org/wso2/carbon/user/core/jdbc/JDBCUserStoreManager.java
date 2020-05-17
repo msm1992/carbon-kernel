@@ -2268,7 +2268,7 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
                 claimAttributeMap.put(claimURI, property);
                 attributeValueMap.put(property, entry.getValue());
             }
-            processAttributesBeforeUpdate(attributeValueMap);
+            processUserStoreAttributesBeforeUpdate(attributeValueMap);
 
             for (Map.Entry<String, String> claimAttributeEntry : claimAttributeMap.entrySet()) {
                 if (attributeValueMap.containsKey(claimAttributeEntry.getValue())) {

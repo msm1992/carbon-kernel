@@ -5545,7 +5545,13 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
      * @param userStoreProperties un-processed map (userstore attribute name -> attribute value) of user store
      *                            attribute values
      */
-    protected void processAttributesBeforeUpdate(Map<String, Object> userStoreProperties) {
+    protected void processAttributesBeforeUpdate(Map<String, String> userStoreProperties) {
+
+        Map<String, ? extends Object> userStorePropertiesMap = userStoreProperties;
+        processUserStoreAttributesBeforeUpdate((Map<String, Object>) userStorePropertiesMap);
+    }
+
+    protected void processUserStoreAttributesBeforeUpdate(Map<String, Object> userStoreProperties) {
 
         // Not implemented.
     }
@@ -5554,6 +5560,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
      * @return
      */
     protected String getEveryOneRoleName() {
+
         return realmConfig.getEveryOneRoleName();
     }
 
