@@ -137,6 +137,8 @@
                                 </bundleDef>
                                 <bundleDef>org.wso2.carbon:org.wso2.carbon.registry.core:${carbon.kernel.version}
                                 </bundleDef>
+                                <bundleDef>org.wso2.carbon:org.wso2.carbon.feature.mgt.core:${carbon.kernel.version}
+                                </bundleDef>
                                 <bundleDef>
                                     org.wso2.carbon:org.wso2.carbon.authenticator.proxy:${carbon.kernel.version}
                                 </bundleDef>
