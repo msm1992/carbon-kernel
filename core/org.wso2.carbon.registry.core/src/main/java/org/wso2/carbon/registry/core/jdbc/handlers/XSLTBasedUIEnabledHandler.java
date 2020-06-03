@@ -39,6 +39,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.wso2.carbon.utils.CarbonUtils.getSecureTransformerFactory;
+
 @Deprecated
 public class XSLTBasedUIEnabledHandler extends UIEnabledHandler {
 
@@ -54,8 +56,8 @@ public class XSLTBasedUIEnabledHandler extends UIEnabledHandler {
 
     private TransformerFactory transformerFactory;
 
-    public XSLTBasedUIEnabledHandler() {
-        transformerFactory = TransformerFactory.newInstance();
+    public XSLTBasedUIEnabledHandler() throws TransformerConfigurationException {
+        transformerFactory = getSecureTransformerFactory();
     }
 
     public void setBrowseXSLT(OMElement browseElement) throws RegistryException {
