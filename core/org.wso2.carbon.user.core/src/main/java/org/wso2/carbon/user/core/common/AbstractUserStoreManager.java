@@ -106,6 +106,7 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
     private static final String SCIM_USERNAME_CLAIM_URI = "urn:scim:schemas:core:1.0:userName";
     private static final String SCIM2_USERNAME_CLAIM_URI = "urn:ietf:params:scim:schemas:core:2.0:User:userName";
     private static final String USERNAME_CLAIM_URI = "http://wso2.org/claims/username";
+    private static final String IDENTITY_CLAIM_URI = "http://wso2.org/claims/identity";
     private static final String APPLICATION_DOMAIN = "Application";
     private static final String WORKFLOW_DOMAIN = "Workflow";
     private static final String INVALID_CLAIM_URL = "InvalidClaimUrl";
@@ -6993,17 +6994,75 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
 
         handlePreGetUserList(condition, domain, profileName, limit, offset, sortBy, sortOrder);
 
+        UserStoreManager secManager = getSecondaryUserStoreManager(domain);
+        final List<String> filteredUserList = new ArrayList<>();
+
+        List<ExpressionCondition> expressionConditions = new ArrayList<>();
+        getExpressionConditions(condition, expressionConditions);
+        boolean identityClaimsExistsInInitialCondition = containsIdentityClaims(expressionConditions);
+        boolean isIdentityClaimsInIdentityStore = true;
+
+        // If the filter condition contains identity claims, we need to call the listeners to retrieve filter claims in
+        // JDBCIdentityDataStore.
+        if (identityClaimsExistsInInitialCondition && secManager != null) {
+            try {
+                for (UserOperationEventListener listener : UMListenerServiceComponent
+                        .getUserOperationEventListeners()) {
+                    if (listener instanceof AbstractUserOperationEventListener) {
+                        AbstractUserOperationEventListener newListener = (AbstractUserOperationEventListener) listener;
+                        if (!newListener.doPreGetUserList(condition, filteredUserList, secManager)) {
+                            handleGetUserListFailure(ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_GET__CONDITIONAL_USER_LIST.getCode(),
+                                    String.format(ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_GET__CONDITIONAL_USER_LIST.getMessage(),
+                                            UserCoreErrorConstants.PRE_LISTENER_TASKS_FAILED_MESSAGE), condition, domain,
+                                    profileName, limit, offset, sortBy, sortOrder);
+                            break;
+                        }
+                    }
+                }
+            } catch (UserStoreException ex) {
+                handleGetUserListFailure(ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_GET__CONDITIONAL_USER_LIST.getCode(),
+                        String.format(ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_GET__CONDITIONAL_USER_LIST.getMessage(),
+                                ex.getMessage()), condition, domain, profileName, limit, offset, sortBy, sortOrder);
+                throw ex;
+            }
+
+            // Check whether condition still contains identity claims. If it does, that means the identity claims are
+            // stored in the user store. Hence, we need to convert the claims to attribute name.
+            expressionConditions = new ArrayList<>();
+            getExpressionConditions(condition, expressionConditions);
+            if (containsIdentityClaims(expressionConditions)) {
+                isIdentityClaimsInIdentityStore = false;
+                updateCondition(condition, domain);
+            }
+
+            if (isIdentityClaimsInIdentityStore && filteredUserList.isEmpty()) {
+                return new String[0];
+            }
+
+        }
+
         if (log.isDebugEnabled()) {
             log.debug("Pre listener get conditional  user list for domain: " + domain);
         }
 
         String[] filteredUsers = new String[0];
-        UserStoreManager secManager = getSecondaryUserStoreManager(domain);
         if (secManager != null) {
             if (secManager instanceof AbstractUserStoreManager) {
-                PaginatedSearchResult users = ((AbstractUserStoreManager) secManager).doGetUserList(condition,
-                        profileName, limit, offset, sortBy, sortOrder);
-                filteredUsers = users.getUsers();
+                // If filter condition only contains identity claims and identity data store is not user store based,
+                // we do not need to search through user store.
+                if (expressionConditions.isEmpty()) {
+                    filteredUsers = filteredUserList.toArray(new String[filteredUserList.size()]);
+                } else {
+                    PaginatedSearchResult users = ((AbstractUserStoreManager) secManager).doGetUserList(condition,
+                            profileName, limit, offset, sortBy, sortOrder);
+                    filteredUsers = users.getUsers();
+                    // If the identity claims are in JDBCIdentityDataStore, they are filtered by doPreGetUserList.
+                    // Hence, we need to combine the results from JDBCIdentityDataStore and user store.
+                    if (identityClaimsExistsInInitialCondition && isIdentityClaimsInIdentityStore) {
+                        filteredUserList.retainAll(Arrays.asList(users.getUsers()));
+                        filteredUsers = filteredUserList.toArray(new String[filteredUserList.size()]);
+                    }
+                }
             }
         }
 
@@ -7334,6 +7393,57 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                     String.format(ErrorMessages.ERROR_CODE_ERROR_DURING_POST_SET_USER_CLAIM_VALUES.getMessage(),
                             e.getMessage()), userName, claims, profileName);
             throw e;
+        }
+    }
+
+    private void getExpressionConditions(Condition condition, List<ExpressionCondition> expressionConditions) {
+
+        if (condition instanceof ExpressionCondition) {
+            ExpressionCondition expressionCondition = (ExpressionCondition) condition;
+            if (StringUtils.isNotEmpty(expressionCondition.getAttributeName()) ||
+                    StringUtils.isNotEmpty(expressionCondition.getAttributeValue()) ||
+                    StringUtils.isNotEmpty(expressionCondition.getOperation())) {
+                expressionConditions.add(expressionCondition);
+            }
+        } else if (condition instanceof OperationalCondition) {
+            Condition leftCondition = ((OperationalCondition) condition).getLeftCondition();
+            getExpressionConditions(leftCondition, expressionConditions);
+            Condition rightCondition = ((OperationalCondition) condition).getRightCondition();
+            getExpressionConditions(rightCondition, expressionConditions);
+        }
+    }
+
+    private boolean containsIdentityClaims(List<ExpressionCondition> expressionConditions) {
+
+        for (ExpressionCondition expressionCondition : expressionConditions) {
+            if (expressionCondition.getAttributeName() != null &&
+                    expressionCondition.getAttributeName().contains(IDENTITY_CLAIM_URI)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void updateCondition(Condition condition, String domain) throws UserStoreException {
+
+        if (condition instanceof ExpressionCondition) {
+            ExpressionCondition expressionCondition = (ExpressionCondition) condition;
+            if (expressionCondition.getAttributeName().
+                    contains(UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI)) {
+                String claimUri = expressionCondition.getAttributeName();
+                try {
+                    ClaimMapping mapping = (ClaimMapping) claimManager.getClaimMapping(claimUri);
+                    String attribute = mapping.getMappedAttribute(domain);
+                    expressionCondition.setAttributeName(attribute);
+                } catch (org.wso2.carbon.user.api.UserStoreException e) {
+                    throw new UserStoreException(e);
+                }
+            }
+        } else if (condition instanceof OperationalCondition) {
+            Condition leftCondition = ((OperationalCondition) condition).getLeftCondition();
+            updateCondition(leftCondition, domain);
+            Condition rightCondition = ((OperationalCondition) condition).getRightCondition();
+            updateCondition(rightCondition, domain);
         }
     }
 }
