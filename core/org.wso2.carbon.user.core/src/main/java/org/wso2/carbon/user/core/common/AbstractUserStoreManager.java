@@ -7038,7 +7038,6 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
             if (isIdentityClaimsInIdentityStore && filteredUserList.isEmpty()) {
                 return new String[0];
             }
-
         }
 
         if (log.isDebugEnabled()) {
@@ -7396,6 +7395,12 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         }
     }
 
+    /**
+     * Extract filter expressions form the condition as a list.
+     *
+     * @param condition             condition.
+     * @param expressionConditions  list of expression conditions.
+     */
     private void getExpressionConditions(Condition condition, List<ExpressionCondition> expressionConditions) {
 
         if (condition instanceof ExpressionCondition) {
@@ -7413,6 +7418,12 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         }
     }
 
+    /**
+     * Check if the expression list contains identity claims.
+     *
+     * @param expressionConditions  list of expression conditions.
+     * @return true if contains identity claims, false otherwise.
+     */
     private boolean containsIdentityClaims(List<ExpressionCondition> expressionConditions) {
 
         for (ExpressionCondition expressionCondition : expressionConditions) {
@@ -7424,6 +7435,14 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         return false;
     }
 
+    /**
+     * If the condition contains expressions with identity claims, the claims are in the form of local claim dialect
+     * URIs. Hence, they are converted to the mapped attribute.
+     *
+     * @param condition condition.
+     * @param domain    domain name.
+     * @throws UserStoreException
+     */
     private void updateCondition(Condition condition, String domain) throws UserStoreException {
 
         if (condition instanceof ExpressionCondition) {
