@@ -81,6 +81,8 @@ public class ReadOnlyLDAPUserStoreConstants {
         setProperty("Referral", "Referral", "follow", "Guides the requests to a domain controller in the correct domain");
         setProperty("ReplaceEscapeCharactersAtUserLogin", "Enable Escape Characters at User Login", "true", "Whether replace escape character when user login");
         setProperty("UniqueID", "", "", "");
+        setProperty(UserStoreConfigConstants.dateAndTimePattern, UserStoreConfigConstants
+                        .dateAndTimePatternDisplayName, "", UserStoreConfigConstants.dateAndTimePatternDescription);
 
     }
 
