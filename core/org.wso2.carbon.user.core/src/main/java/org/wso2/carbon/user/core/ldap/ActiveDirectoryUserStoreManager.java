@@ -182,6 +182,10 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
             NameParser ldapParser = dirContext.getNameParser("");
             compoundName = ldapParser.parse("cn=" + escapeSpecialCharactersForDN(userName));
 
+            if (logger.isDebugEnabled()) {
+                logger.debug("Binding user: " + compoundName);
+            }
+
 			/* bind the user. A disabled user account with no password */
             dirContext.bind(compoundName, null, basicAttributes);
             isUserBinded = true;
@@ -236,6 +240,11 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
      */
     protected void setUserClaims(Map<String, String> claims, BasicAttributes basicAttributes,
                                  String userName) throws UserStoreException {
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("Processing user claims for user : " + userName);
+        }
+
         if (claims != null) {
             BasicAttribute claim;
             Map<String, Object> userStoreProperties = new HashMap<>();
@@ -273,7 +282,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
                 claim = new BasicAttribute(entry.getKey());
                 claim.add(entry.getValue());
                 if (logger.isDebugEnabled()) {
-                    logger.debug("AttributeName: " + entry.getKey() + " AttributeValue: " + entry.getValue());
+                    logger.debug("Attribute name: " + entry.getKey() + " Attribute value: " + entry.getValue());
                 }
                 basicAttributes.put(claim);
             }
@@ -515,6 +524,11 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
         String userSearchBase = realmConfig.getUserStoreProperty(LDAPConstants.USER_SEARCH_BASE);
         String userSearchFilter = realmConfig
                 .getUserStoreProperty(LDAPConstants.USER_NAME_SEARCH_FILTER);
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("Updating user claims of user: " + userName + " in user search base: " + userSearchBase);
+        }
+
         // if user name contains domain name, remove domain name
         String[] userNames = userName.split(CarbonConstants.DOMAIN_SEPARATOR);
         if (userNames.length > 1) {
@@ -675,7 +689,8 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
 
         if (isImmutableAttribute(userName, claimURI, value)) {
             if (logger.isDebugEnabled()) {
-                logger.debug("Immutable attribute:" + claimURI + ". Therefore not updating user claim.");
+                logger.debug("Immutable attribute:" + claimURI + ". Therefore not updating user claim for user: " +
+                        userName);
             }
             return;
         }

@@ -476,7 +476,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             if (patterns != null && !patterns.isEmpty()) {
 
             if (debug) {
-                log.debug("Using UserDNPatterns " + patterns);
+                log.debug("Using User DN Patterns " + patterns + " for user: " + userName);
             }
 
             // if the property is present, split it using # to see if there are
@@ -576,7 +576,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             if (patterns != null && !patterns.isEmpty()) {
 
                 if (log.isDebugEnabled()) {
-                    log.debug("Using User DN Patterns " + patterns);
+                    log.debug("Using User DN Patterns " + patterns + " for user: " + userName);
                 }
 
                 if (patterns.contains("#")) {
@@ -611,9 +611,10 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
                 }
                 if (log.isDebugEnabled()) {
                     try {
-                        log.debug("Searching for user with SearchFilter: " + searchFilter + " in SearchBase: " + dirContext.getNameInNamespace());
+                        log.debug("Searching for user: " + userName + " with search filter: " + searchFilter + " in "
+                                + "search base: " + dirContext.getNameInNamespace());
                     } catch (NamingException e) {
-                        log.debug("Error while getting DN of search base", e);
+                        log.debug("Error while getting DN of search base: " + dirContext.getNameInNamespace(), e);
                     }
                     if (propertyNames == null) {
                         log.debug("No attributes requested");
@@ -756,7 +757,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
         String searchBases = ((LDAPRoleContext) context).getSearchBase();
 
         if (debug) {
-            log.debug("Using search filter: " + searchFilter);
+            log.debug("Using search filter: " + searchFilter + " in search base: " + searchBases);
         }
         SearchControls searchCtls = new SearchControls();
         searchCtls.setSearchScope(SearchControls.SUBTREE_SCOPE);
@@ -818,17 +819,19 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
 
     public boolean doCheckExistingUser(String userName) throws UserStoreException {
 
-        if (log.isDebugEnabled()) {
-            log.debug("Searching for user " + userName);
-        }
-
         if (userName == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Username value is null.");
+            }
             return false;
         }
 
         boolean bFound = false;
         String userSearchFilter = realmConfig.getUserStoreProperty(LDAPConstants.USER_NAME_SEARCH_FILTER);
         userSearchFilter = userSearchFilter.replace("?", escapeSpecialCharactersForFilter(userName));
+        if (log.isDebugEnabled()) {
+            log.debug("Searching for user " + userName + " with search filter: " + userSearchFilter);
+        }
         try {
             String searchBase = null;
             String userDN = null;
@@ -2161,7 +2164,8 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
                 searchCtls.setReturningAttributes(returnedAtts);
 
                 if (debug) {
-                    log.debug("Reading roles with the membershipProperty Property: " + membershipProperty);
+                    log.debug("Reading roles with the membershipProperty Property: " + membershipProperty +
+                            " with search filter: " + searchFilter);
                 }
 
                 list = this.getListOfNames(searchBase, searchFilter, searchCtls, roleNameProperty, false);
@@ -2754,6 +2758,11 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
 
         if (limit == 0) {
             return result;
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Performing paginated search for user list with condition: " + condition + " limit: " + limit +
+                    " offset: " + offset + " sort by: " + sortBy + " sort order: " + sortOrder);
         }
 
         int pageSize = limit;
@@ -3418,8 +3427,8 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             searchCtls.setReturningAttributes(returnedAtts);
 
             if (debug) {
-                log.debug("Do check whether the user: " + userName + " is in role: " + roleName);
-                log.debug("Search filter: " + searchFilter);
+                log.debug("Do check whether the user: " + userName + " is in role: " + roleName + " with search " +
+                        "filter: " + searchFilter);
                 for (String retAttrib : returnedAtts) {
                     log.debug("Requesting attribute: " + retAttrib);
                 }
@@ -3522,8 +3531,8 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
             searchCtls.setReturningAttributes(returnedAtts);
 
             if (debug) {
-                log.debug("Do check whether the user : " + userName + " is in role: " + roleName);
-                log.debug("Search filter : " + searchFilter);
+                log.debug("Do check whether the user : " + userName + " is in role: " + roleName + " with search " +
+                        "filter: " + searchFilter);
                 for (String retAttrib : returnedAtts) {
                     log.debug("Requesting attribute: " + retAttrib);
                 }
@@ -3562,8 +3571,8 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
                 } else {
 
                     if (debug) {
-                        log.debug("Do check whether the user: " + userName + " is in role: " + roleName);
-                        log.debug("Search filter: " + searchFilter);
+                        log.debug("Do check whether the user: " + userName + " is in role: " + roleName + " with " +
+                                "search filter: " + searchFilter);
                         for (String retAttrib : returnedAtts) {
                             log.debug("Requesting attribute: " + retAttrib);
                         }
@@ -3826,8 +3835,11 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
      */
     private List<String> getGroupNameAttributeValuesOfGroups(List<LdapName> groupDNs)
             throws UserStoreException {
-        log.debug("GetGroupNameAttributeValuesOfGroups with DN");
-        boolean debug = log.isDebugEnabled();
+
+        if (log.isDebugEnabled()) {
+            log.debug("Getting group name attribute values of groups with DN: " + groupDNs);
+        }
+
         // get the DNs of the groups to which user belongs to, as per the search
         // parameters
         String groupNameAttribute =
@@ -3844,7 +3856,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
                     if (!isInSearchBase(group, new LdapName(searchGroup))) {
                         continue;
                     }
-                    if (debug) {
+                    if (log.isDebugEnabled()) {
                         log.debug("Using DN: " + group);
                     }
                     /* check to see if the required attribute can be retrieved by the DN itself */
@@ -3858,7 +3870,7 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
                         Attribute groupAttribute = groupAttributes.get(groupNameAttribute);
                         if (groupAttribute != null) {
                             String groupNameAttributeValue = (String) groupAttribute.get();
-                            if (debug) {
+                            if (log.isDebugEnabled()) {
                                 log.debug(groupNameAttribute + " : " + groupNameAttributeValue);
                             }
                             groupNameAttributeValues.add(groupNameAttributeValue);
