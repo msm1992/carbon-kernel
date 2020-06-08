@@ -143,7 +143,8 @@ public class ActiveDirectoryUserStoreConstants {
         setProperty(UserStoreConfigConstants.roleNameJavaScriptRegEx, "Role Name RegEx (Javascript)", "^[\\S]{3,30}$",
                 UserStoreConfigConstants.roleNameJavaScriptRegExDescription);
         setProperty("UniqueID", "", "", "");
-
+        setProperty(UserStoreConfigConstants.dateAndTimePattern, UserStoreConfigConstants
+                .dateAndTimePatternDisplayName, "", UserStoreConfigConstants.dateAndTimePatternDescription);
 
     }
 
