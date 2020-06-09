@@ -6996,45 +6996,28 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
 
         UserStoreManager secManager = getSecondaryUserStoreManager(domain);
         final List<String> filteredUserList = new ArrayList<>();
-
         List<ExpressionCondition> expressionConditions = new ArrayList<>();
         getExpressionConditions(condition, expressionConditions);
         boolean identityClaimsExistsInInitialCondition = containsIdentityClaims(expressionConditions);
         boolean isIdentityClaimsInIdentityStore = true;
 
-        // If the filter condition contains identity claims, we need to call the listeners to retrieve filter claims in
-        // JDBCIdentityDataStore.
-        if (identityClaimsExistsInInitialCondition && secManager != null) {
-            try {
-                for (UserOperationEventListener listener : UMListenerServiceComponent
-                        .getUserOperationEventListeners()) {
-                    if (listener instanceof AbstractUserOperationEventListener) {
-                        AbstractUserOperationEventListener newListener = (AbstractUserOperationEventListener) listener;
-                        if (!newListener.doPreGetUserList(condition, filteredUserList, secManager)) {
-                            handleGetUserListFailure(ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_GET__CONDITIONAL_USER_LIST.getCode(),
-                                    String.format(ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_GET__CONDITIONAL_USER_LIST.getMessage(),
-                                            UserCoreErrorConstants.PRE_LISTENER_TASKS_FAILED_MESSAGE), condition, domain,
-                                    profileName, limit, offset, sortBy, sortOrder);
-                            break;
-                        }
-                    }
-                }
-            } catch (UserStoreException ex) {
-                handleGetUserListFailure(ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_GET__CONDITIONAL_USER_LIST.getCode(),
-                        String.format(ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_GET__CONDITIONAL_USER_LIST.getMessage(),
-                                ex.getMessage()), condition, domain, profileName, limit, offset, sortBy, sortOrder);
-                throw ex;
-            }
+        // We need to call the listeners to retrieve filter claims in JDBCIdentityDataStore.
+        handlePreGetUserListWithIdentityClaims(condition, filteredUserList, domain, secManager, profileName, limit,
+                offset, sortBy, sortOrder);
+
+        if (identityClaimsExistsInInitialCondition) {
+            expressionConditions = new ArrayList<>();
+            getExpressionConditions(condition, expressionConditions);
 
             // Check whether condition still contains identity claims. If it does, that means the identity claims are
             // stored in the user store. Hence, we need to convert the claims to attribute name.
-            expressionConditions = new ArrayList<>();
-            getExpressionConditions(condition, expressionConditions);
             if (containsIdentityClaims(expressionConditions)) {
                 isIdentityClaimsInIdentityStore = false;
                 updateCondition(condition, domain);
             }
 
+            // If identity claims are in JDBCIdentityDataStore, and filtering in JDBCIdentityDataStore returned an empty
+            // list, we can skip filtering in user store.
             if (isIdentityClaimsInIdentityStore && filteredUserList.isEmpty()) {
                 return new String[0];
             }
@@ -7392,6 +7375,33 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
                     String.format(ErrorMessages.ERROR_CODE_ERROR_DURING_POST_SET_USER_CLAIM_VALUES.getMessage(),
                             e.getMessage()), userName, claims, profileName);
             throw e;
+        }
+    }
+
+    private void handlePreGetUserListWithIdentityClaims(Condition condition, List<String> returnUserNameList,
+                                                        String domain, UserStoreManager userStoreManager,
+                                                        String profileName, int limit, int offset, String sortBy,
+                                                        String sortOrder) throws UserStoreException {
+
+        try {
+            for (UserOperationEventListener listener : UMListenerServiceComponent
+                    .getUserOperationEventListeners()) {
+                if (listener instanceof AbstractUserOperationEventListener) {
+                    AbstractUserOperationEventListener newListener = (AbstractUserOperationEventListener) listener;
+                    if (!newListener.doPreGetUserList(condition, returnUserNameList, userStoreManager, domain)) {
+                        handleGetUserListFailure(ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_GET__CONDITIONAL_USER_LIST.getCode(),
+                                String.format(ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_GET__CONDITIONAL_USER_LIST.getMessage(),
+                                        UserCoreErrorConstants.PRE_LISTENER_TASKS_FAILED_MESSAGE), condition, domain,
+                                profileName, limit, offset, sortBy, sortOrder);
+                        break;
+                    }
+                }
+            }
+        } catch (UserStoreException ex) {
+            handleGetUserListFailure(ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_GET__CONDITIONAL_USER_LIST.getCode(),
+                    String.format(ErrorMessages.ERROR_CODE_ERROR_DURING_PRE_GET__CONDITIONAL_USER_LIST.getMessage(),
+                            ex.getMessage()), condition, domain, profileName, limit, offset, sortBy, sortOrder);
+            throw ex;
         }
     }
 
