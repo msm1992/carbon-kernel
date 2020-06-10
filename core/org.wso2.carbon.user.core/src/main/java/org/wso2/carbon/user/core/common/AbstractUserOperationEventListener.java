@@ -435,6 +435,21 @@ public class AbstractUserOperationEventListener implements UserOperationEventLis
         return true;
     }
 
+    /**
+     * Pre listener for the get paginated conditional user list method.
+     *
+     * @param condition             Condition.
+     * @param returnUserNameList    List of user names that this listener will return.
+     * @param userStoreManager      UserStoreManager.
+     * @param domain                User store domain.
+     * @throws UserStoreException   UserStoreException
+     */
+    public boolean doPreGetUserList(Condition condition, List<String> returnUserNameList,
+                                    UserStoreManager userStoreManager, String domain) throws UserStoreException {
+
+        return true;
+    }
+
 
     /**
      * Pre listener for the get paginated user list method.
