@@ -7001,11 +7001,13 @@ public abstract class AbstractUserStoreManager implements UserStoreManager, Pagi
         boolean identityClaimsExistsInInitialCondition = containsIdentityClaims(expressionConditions);
         boolean isIdentityClaimsInIdentityStore = true;
 
-        // We need to call the listeners to retrieve filter claims in JDBCIdentityDataStore.
+        // We need to call the listeners to filter users if the identity claims are stored in JDBCIdentityDataStore.
         handlePreGetUserListWithIdentityClaims(condition, filteredUserList, domain, secManager, profileName, limit,
                 offset, sortBy, sortOrder);
 
         if (identityClaimsExistsInInitialCondition) {
+            // If identity claims are stored in JDBCIdentityDataStore, the 'condition' is updated by the corresponding
+            // listener method. Hence, we need to get the updated expression conditions list to proceed.
             expressionConditions = new ArrayList<>();
             getExpressionConditions(condition, expressionConditions);
 
