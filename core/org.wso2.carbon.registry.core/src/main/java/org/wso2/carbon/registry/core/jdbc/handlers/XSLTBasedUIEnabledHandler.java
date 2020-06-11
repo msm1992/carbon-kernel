@@ -22,6 +22,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
 
+import javax.xml.XMLConstants;
 import javax.xml.namespace.QName;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerConfigurationException;
@@ -56,8 +57,13 @@ public class XSLTBasedUIEnabledHandler extends UIEnabledHandler {
 
     private TransformerFactory transformerFactory;
 
-    public XSLTBasedUIEnabledHandler() throws TransformerConfigurationException {
-        transformerFactory = getSecureTransformerFactory();
+    public XSLTBasedUIEnabledHandler() {
+
+        try {
+            transformerFactory = getSecureTransformerFactory();
+        } catch (TransformerConfigurationException e) {
+            log.error("Failed to load XML Processor Feature" + XMLConstants.FEATURE_SECURE_PROCESSING, e);
+        }
     }
 
     public void setBrowseXSLT(OMElement browseElement) throws RegistryException {
