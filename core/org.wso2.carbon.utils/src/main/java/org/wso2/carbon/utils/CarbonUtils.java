@@ -61,6 +61,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
+import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
@@ -1331,5 +1332,18 @@ public class CarbonUtils {
         dbf.setAttribute(org.apache.xerces.impl.Constants.XERCES_PROPERTY_PREFIX +
                 org.apache.xerces.impl.Constants.SECURITY_MANAGER_PROPERTY, securityManager);
         return dbf;
+    }
+
+    /**
+     * Create a secure process enabled TransformerFactory.
+     *
+     * @return A new instance of TransformerFactory.
+     * @throws TransformerConfigurationException if a configuration error has occurred while processing XML securely.
+     */
+    public static TransformerFactory getSecureTransformerFactory() throws TransformerConfigurationException {
+
+        TransformerFactory factory = TransformerFactory.newInstance();
+        factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        return factory;
     }
 }
