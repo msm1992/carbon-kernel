@@ -439,9 +439,10 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
     protected void setUserClaims(Map<String, String> claims, BasicAttributes basicAttributes,
                                  String userName) throws UserStoreException {
         BasicAttribute claim;
-        boolean debug = log.isDebugEnabled();
 
-        log.debug("Processing user claims");
+        if (log.isDebugEnabled()) {
+            log.debug("Processing user claims for user : " + userName);
+        }
 		/*
 		 * we keep boolean values to know whether compulsory attributes 'sn' and 'cn' are set during
 		 * setting claims.
@@ -462,10 +463,6 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                 // needs to get attribute name from claim mapping
                 String claimURI = entry.getKey();
 
-                if (debug) {
-                    log.debug("Claim URI: " + claimURI);
-                }
-
                 String attributeName = null;
                 try {
                     attributeName = getClaimAtrribute(claimURI, userName, null);
@@ -480,9 +477,9 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                     isSNExists = true;
                 }
 
-                if (debug) {
-                    log.debug("Mapped attribute: " + attributeName);
-                    log.debug("Attribute value: " + claims.get(entry.getKey()));
+                if (log.isDebugEnabled()) {
+                    log.debug("For Claim URI: " + claimURI + ", mapped attribute is: " + attributeName + " ,and the " +
+                            "attribute value is: " + claims.get(entry.getKey()));
                 }
                 claim = new BasicAttribute(attributeName);
                 claim.add(claims.get(entry.getKey()));
@@ -512,12 +509,15 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
 
         boolean debug = log.isDebugEnabled();
 
-        if (debug) {
-            log.debug("Deleting user: " + userName);
-        }
         // delete user from LDAP group if read-write enabled.
         String userNameAttribute = realmConfig
                 .getUserStoreProperty(LDAPConstants.USER_NAME_ATTRIBUTE);
+        String userSearchBase = realmConfig.getUserStoreProperty(LDAPConstants.USER_SEARCH_BASE);
+
+        if (debug) {
+            log.debug("Deleting user: " + userName + " in user search base: " + userSearchBase);
+        }
+
         String searchFilter = realmConfig
                 .getUserStoreProperty(LDAPConstants.USER_NAME_SEARCH_FILTER);
         searchFilter = searchFilter.replace("?", escapeSpecialCharactersForFilter(userName));
@@ -779,7 +779,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
     protected void doUpdateCredentialsValidityChecks(String userName, Object newCredential)
             throws UserStoreException {
         if (!isExistingUser(userName)) {
-            throw new UserStoreException("User " + userName + " does not exisit in the user store");
+            throw new UserStoreException("User " + userName + " does not exist in the user store");
         }
 
         if (!checkUserPasswordValid(newCredential)) {
@@ -841,6 +841,11 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
         String userSearchBase = realmConfig.getUserStoreProperty(LDAPConstants.USER_SEARCH_BASE);
         String userSearchFilter = realmConfig
                 .getUserStoreProperty(LDAPConstants.USER_NAME_SEARCH_FILTER);
+
+        if (log.isDebugEnabled()) {
+            log.debug("Updating user claims of user: " + userName + " in user search base: " + userSearchBase);
+        }
+
         // if user name contains domain name, remove domain name
         String[] userNames = userName.split(CarbonConstants.DOMAIN_SEPARATOR);
         if (userNames.length > 1) {
@@ -1851,6 +1856,11 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
         String roleNameAttributeName = ((LDAPRoleContext) context).getRoleNameProperty();
         String searchBase = ((LDAPRoleContext) context).getSearchBase();
 
+        if (log.isDebugEnabled()) {
+            log.debug("Updating name of role: " + roleName + " to: " + newRoleName + " in search base: " +
+                    searchBase);
+        }
+
         DirContext mainContext = this.connectionSource.getContext();
         DirContext groupContext = null;
         NamingEnumeration<SearchResult> groupSearchResults = null;
@@ -1914,6 +1924,10 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
         groupSearchFilter = groupSearchFilter.replace("?", escapeSpecialCharactersForFilter(context.getRoleName()));
         String[] returningAttributes = {((LDAPRoleContext) context).getRoleNameProperty()};
         String searchBase = ((LDAPRoleContext) context).getSearchBase();
+
+        if (log.isDebugEnabled()) {
+            log.debug("Deleting role: " + roleName + " in search base: " + searchBase);
+        }
 
         DirContext mainDirContext = null;
         DirContext groupContext = null;
