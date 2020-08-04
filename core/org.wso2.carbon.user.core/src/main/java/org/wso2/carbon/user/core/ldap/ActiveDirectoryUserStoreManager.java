@@ -285,9 +285,10 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
                     if (claimSeparator != null && !claimSeparator.trim().isEmpty()) {
                         userAttributeSeparator = claimSeparator;
                     }
-                    if (((String) entry.getValue()).contains(userAttributeSeparator)) {
+                    String claimValue = (String) entry.getValue();
+                    if (claimValue.contains(userAttributeSeparator)) {
                         StringTokenizer st =
-                                new StringTokenizer((String) entry.getValue(), userAttributeSeparator);
+                                new StringTokenizer(claimValue, userAttributeSeparator);
                         while (st.hasMoreElements()) {
                             String newVal = st.nextElement().toString();
                             if (newVal != null && newVal.trim().length() > 0) {
