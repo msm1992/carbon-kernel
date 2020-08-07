@@ -1547,7 +1547,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                                             searchBase);
 
                             // assume only one group with given group name
-                            String groupDN = "cn=" + newRole;
+                            String groupDN = resolveGroupDN(searchFilter, newRole, context);
                             if (!groupResults.hasMore()) {
                                 modifyUserInRole(userNameDN, groupDN, DirContext.ADD_ATTRIBUTE,
                                         searchBase);
@@ -1579,6 +1579,46 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
+            throw new UserStoreException(errorMessage, e);
+        } finally {
+            JNDIUtil.closeContext(mainDirContext);
+        }
+    }
+
+    /**
+     * Resolves groupDN.
+     *
+     * @param searchFilter
+     * @param role
+     * @param context
+     * @return
+     * @throws UserStoreException
+     */
+    private String resolveGroupDN (String searchFilter, String role, LDAPRoleContext context)
+            throws UserStoreException {
+
+        String roleSearchFilter = searchFilter.replace("?", escapeSpecialCharactersForFilter(role));
+        String membershipAttribute = realmConfig.getUserStoreProperty(LDAPConstants.MEMBERSHIP_ATTRIBUTE);
+        String[] returningAttributes = new String[]{membershipAttribute};
+        String searchBase = context.getSearchBase();
+        DirContext mainDirContext = this.connectionSource.getContext();
+
+        try{
+            NamingEnumeration<SearchResult> groupResults =
+                    searchInGroupBase(roleSearchFilter,
+                            returningAttributes,
+                            SearchControls.SUBTREE_SCOPE,
+                            mainDirContext,
+                            searchBase);
+            SearchResult resultedGroup = null;
+            String groupDN = null;
+            if (groupResults.hasMore()) {
+                resultedGroup = groupResults.next();
+                groupDN = resultedGroup.getName();
+            }
+            return groupDN;
+        } catch (NamingException e) {
+            String errorMessage = "Error while resolving the GroupDN";
             throw new UserStoreException(errorMessage, e);
         } finally {
             JNDIUtil.closeContext(mainDirContext);
