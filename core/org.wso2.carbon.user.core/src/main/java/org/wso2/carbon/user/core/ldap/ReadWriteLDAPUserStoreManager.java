@@ -1586,12 +1586,12 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
     }
 
     /**
-     * Resolves groupDN.
+     * Resolves groupDN which is used in doUpdateRoleListOfUser method to modify the roles of the user.
      *
      * @param searchFilter
      * @param role
      * @param context
-     * @return
+     * @return String groupDN
      * @throws UserStoreException
      */
     private String resolveGroupDN (String searchFilter, String role, LDAPRoleContext context)
