@@ -1611,9 +1611,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
 
             try {
                 searchFilter = searchFilter.replace("?", escapeSpecialCharactersForFilter(roleName));
-                String membershipAttributeName =
-                        realmConfig.getUserStoreProperty(LDAPConstants.MEMBERSHIP_ATTRIBUTE);
-                String[] returningAttributes = new String[]{membershipAttributeName};
+                String[] returningAttributes = new String[]{};
 
                 String searchBase = ctx.getSearchBase();
                 groupSearchResults =
@@ -1631,11 +1629,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                 // restriction specified in user-mgt.xml by
                 // checking whether all users are trying to be deleted
                 // before updating LDAP.
-                Attribute returnedMemberAttribute =
-                        resultedGroup.getAttributes()
-                                .get(membershipAttributeName);
-                if (!emptyRolesAllowed &&
-                        newUsers.length - deletedUsers.length + returnedMemberAttribute.size() == 0) {
+                if (!emptyRolesAllowed) {
                     errorMessage =
                             "There should be at least one member in the role. "
                                     + "Hence can not delete all the members.";
