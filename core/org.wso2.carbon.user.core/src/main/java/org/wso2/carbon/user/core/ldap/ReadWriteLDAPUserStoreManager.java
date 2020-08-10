@@ -1594,7 +1594,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
      * @return String groupDN
      * @throws UserStoreException
      */
-    private String resolveGroupDN (String searchFilter, String role, LDAPRoleContext context)
+    private String resolveGroupDN(String searchFilter, String role, LDAPRoleContext context)
             throws UserStoreException {
 
         String roleSearchFilter = searchFilter.replace("?", escapeSpecialCharactersForFilter(role));
@@ -1603,7 +1603,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
         String searchBase = context.getSearchBase();
         DirContext mainDirContext = this.connectionSource.getContext();
 
-        try{
+        try {
             NamingEnumeration<SearchResult> groupResults =
                     searchInGroupBase(roleSearchFilter,
                             returningAttributes,
@@ -1618,7 +1618,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             }
             return groupDN;
         } catch (NamingException e) {
-            String errorMessage = "Error while resolving the GroupDN";
+            String errorMessage = "Error while resolving the GroupDN.";
             throw new UserStoreException(errorMessage, e);
         } finally {
             JNDIUtil.closeContext(mainDirContext);
