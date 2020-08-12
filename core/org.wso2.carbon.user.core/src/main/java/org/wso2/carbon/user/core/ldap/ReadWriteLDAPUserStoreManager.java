@@ -53,6 +53,7 @@ import java.util.Random;
 import java.util.StringTokenizer;
 import java.util.regex.Pattern;
 import javax.naming.Name;
+import javax.naming.NameAlreadyBoundException;
 import javax.naming.NameParser;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -1751,6 +1752,13 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                 logger.debug("User: " + userNameDN + " was successfully " + "modified in LDAP group: "
                         + groupRDN);
             }
+        } catch (NameAlreadyBoundException e) {
+            String errorMessage = "User: " + userNameDN
+                    + " already exists in in LDAP role: " + groupRDN;
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
+            throw new UserStoreException(errorMessage);
         } catch (NamingException e) {
             String errorMessage = "Error occurred while modifying user entry: " + userNameDN
                     + " in LDAP role: " + groupRDN;

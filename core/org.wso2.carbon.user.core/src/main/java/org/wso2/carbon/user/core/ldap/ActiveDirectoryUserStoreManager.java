@@ -730,7 +730,7 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
 
             answer = dirContext.search(escapeDNForSearch(userSearchBase), searchFilter, searchCtls);
 
-            while (answer.hasMore()) {
+            for (int index = 0; index < givenMax && answer.hasMore(); index++) {
                 String displayName = null;
                 String userName = null;
                 sr = answer.next();
