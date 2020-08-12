@@ -1753,8 +1753,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                         + groupRDN);
             }
         } catch (NameAlreadyBoundException e) {
-            String errorMessage = "User: " + userNameDN
-                    + " already exists in in LDAP role: " + groupRDN;
+            String errorMessage = "User: " + userNameDN + " already exists in in LDAP role: " + groupRDN;
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }

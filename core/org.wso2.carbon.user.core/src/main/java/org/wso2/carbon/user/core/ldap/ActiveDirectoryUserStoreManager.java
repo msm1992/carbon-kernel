@@ -693,6 +693,10 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
             givenMax = Integer.parseInt(realmConfig
                     .getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_MAX_USER_LIST));
         } catch (NumberFormatException e) {
+            if (debug) {
+                logger.debug("Error occurred while reading user store property: "
+                        + UserCoreConstants.RealmConfig.PROPERTY_MAX_USER_LIST + " : " + e);
+            }
             givenMax = UserCoreConstants.MAX_USER_ROLE_LIST;
         }
 
@@ -700,6 +704,10 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
             searchTime = Integer.parseInt(realmConfig
                     .getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_MAX_SEARCH_TIME));
         } catch (NumberFormatException e) {
+            if (debug) {
+                logger.debug("Error occurred while reading user store property: "
+                        + UserCoreConstants.RealmConfig.PROPERTY_MAX_SEARCH_TIME + " : " + e);
+            }
             searchTime = UserCoreConstants.MAX_SEARCH_TIME;
         }
 
