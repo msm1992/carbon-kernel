@@ -692,14 +692,14 @@ public class ActiveDirectoryUserStoreManager extends ReadWriteLDAPUserStoreManag
         try {
             givenMax = Integer.parseInt(realmConfig
                     .getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_MAX_USER_LIST));
-        } catch (Exception e) {
+        } catch (NumberFormatException e) {
             givenMax = UserCoreConstants.MAX_USER_ROLE_LIST;
         }
 
         try {
             searchTime = Integer.parseInt(realmConfig
                     .getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_MAX_SEARCH_TIME));
-        } catch (Exception e) {
+        } catch (NumberFormatException e) {
             searchTime = UserCoreConstants.MAX_SEARCH_TIME;
         }
 
