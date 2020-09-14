@@ -119,6 +119,11 @@ public final class CarbonUILoginUtil {
             }
         }
 
+        if (requestedURI.contains(";")) {
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            return false;
+        }
+
         try {
             Cookie[] cookies = request.getCookies();
             if (cookies != null) {
