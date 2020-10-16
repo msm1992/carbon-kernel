@@ -75,8 +75,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import javax.cache.Cache;
 import javax.cache.CacheBuilder;
@@ -4565,8 +4563,8 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
         return false;
     }
 
-    protected void processAttributesAfterRetrieval(String userName, Map<String, String> userStorePropertyValues,
-                                                   String profileName) {
+    @Override
+    protected void processAttributesAfterRetrieval(Map<String, String> userStorePropertyValues) {
 
         String timestampAttributesProperty = Optional.ofNullable(realmConfig
                 .getUserStoreProperty(UserStoreConfigConstants.timestampAttributes)).orElse("");
