@@ -235,9 +235,9 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
                     msgContext.getProperty(MultitenantConstants.REST_GET_DELETE_INVOKE));
         }
 
-        if (msgContext.getProperty(MultitenantConstants.DECODE_MULTIPART_DATA_PARAM) != null) {
-            superTenantOutMessageContext.setProperty(MultitenantConstants.DECODE_MULTIPART_DATA_PARAM,
-                    msgContext.getProperty(MultitenantConstants.DECODE_MULTIPART_DATA_PARAM));
+        Object decodeMultipartDataParam = msgContext.getProperty(MultitenantConstants.DECODE_MULTIPART_DATA_PARAM);
+        if (decodeMultipartDataParam != null) {
+            superTenantOutMessageContext.setProperty(MultitenantConstants.DECODE_MULTIPART_DATA_PARAM, decodeMultipartDataParam);
         }
 
         if (msgContext.getProperty(SERVICE_PREFIX) != null) {
