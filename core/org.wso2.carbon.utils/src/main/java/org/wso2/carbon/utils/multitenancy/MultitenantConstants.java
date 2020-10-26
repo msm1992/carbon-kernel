@@ -80,7 +80,10 @@ public class MultitenantConstants {
     public static final String USER_INFO_HANDLER = "UserInfoHandler";
 
     public static final String REST_GET_DELETE_INVOKE= "rest_get_delete_invoke";
-
+    /**
+     * Property required to decide if multipart data should be decoded/not decoded before sending out
+     */
+    public static final String DECODE_MULTIPART_DATA_PARAM = "DECODE_MULTIPART_DATA";
     /**
      * Properties required for evaluating Content-Length and Chunk Disabling
      */

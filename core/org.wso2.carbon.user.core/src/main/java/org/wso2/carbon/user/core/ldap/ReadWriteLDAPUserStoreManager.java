@@ -44,9 +44,6 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -56,9 +53,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.StringTokenizer;
-import java.util.function.Function;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import javax.naming.Name;
 import javax.naming.NameAlreadyBoundException;
@@ -451,20 +446,24 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
         if (log.isDebugEnabled()) {
             log.debug("Processing user claims for user : " + userName);
         }
-		/*
-		 * we keep boolean values to know whether compulsory attributes 'sn' and 'cn' are set during
-		 * setting claims.
-		 */
+        /*
+         * we keep boolean values to know whether compulsory attributes 'sn' and 'cn' are set during
+         * setting claims.
+         */
         boolean isSNExists = false;
         boolean isCNExists = false;
 
+        String immutableAttributesProperty = Optional.ofNullable(realmConfig
+                .getUserStoreProperty(UserStoreConfigConstants.immutableAttributes)).orElse(EMPTY_ATTRIBUTE_STRING);
+        String[] immutableAttributes = StringUtils.split(immutableAttributesProperty, ",");
+
         if (claims != null) {
             for (Map.Entry<String, String> entry : claims.entrySet()) {
-				/*
-				 * LDAP does not allow for empty values. If an attribute has a value it’s stored
-				 * with the entry, otherwise it is not. Hence needs to check for empty values before
-				 * storing the attribute.
-				 */
+                /*
+                 * LDAP does not allow for empty values. If an attribute has a value it’s stored
+                 * with the entry, otherwise it is not. Hence needs to check for empty values before
+                 * storing the attribute.
+                 */
                 if (StringUtils.isEmpty(entry.getValue())) {
                     continue;
                 }
@@ -483,6 +482,14 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                     isCNExists = true;
                 } else if (ATTR_NAME_SN.equals(attributeName)) {
                     isSNExists = true;
+                }
+                //Skip in case of immutable attribute passing via the claim map
+                if (StringUtils.isNotEmpty(attributeName) &&
+                        ArrayUtils.contains(immutableAttributes, attributeName)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Skipped Immutable attribute: " + attributeName);
+                    }
+                    continue;
                 }
 
                 if (log.isDebugEnabled()) {
