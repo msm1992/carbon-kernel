@@ -442,7 +442,6 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
      */
     protected void setUserClaims(Map<String, String> claims, BasicAttributes basicAttributes,
                                  String userName) throws UserStoreException {
-        BasicAttribute claim;
 
         if (log.isDebugEnabled()) {
             log.debug("Processing user claims for user : " + userName);
@@ -465,7 +464,7 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                  * with the entry, otherwise it is not. Hence needs to check for empty values before
                  * storing the attribute.
                  */
-                if (EMPTY_ATTRIBUTE_STRING.equals(entry.getValue())) {
+                if (StringUtils.isEmpty(entry.getValue())) {
                     continue;
                 }
                 // needs to get attribute name from claim mapping
@@ -497,9 +496,9 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                     log.debug("For Claim URI: " + claimURI + ", mapped attribute is: " + attributeName + " ,and the " +
                             "attribute value is: " + claims.get(entry.getKey()));
                 }
-                claim = new BasicAttribute(attributeName);
-                claim.add(claims.get(entry.getKey()));
-                basicAttributes.put(claim);
+
+                BasicAttribute attribute = getAttribute(attributeName, claims.get(entry.getKey()));
+                basicAttributes.put(attribute);
             }
         }
 
@@ -939,33 +938,8 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
                     }
 //                    claimEntry.setValue(escapeISSpecialCharacters(uidName));
                 }
-                Attribute currentUpdatedAttribute = new BasicAttribute(attributeName);
-                /* if updated attribute value is null, remove its values. */
-                if (EMPTY_ATTRIBUTE_STRING.equals((String) claimEntry.getValue())) {
-                    currentUpdatedAttribute.clear();
-                } else {
-                    String userAttributeSeparator = ",";
-                    if ((String) claimEntry.getValue() != null && !attributeName.equals("uid")
-                            && !attributeName.equals("sn")) {
-                        String claimSeparator = realmConfig.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR);
-                        if (claimSeparator != null && !claimSeparator.trim().isEmpty()) {
-                            userAttributeSeparator = claimSeparator;
-                        }
-                        if (((String) claimEntry.getValue()).contains(userAttributeSeparator)) {
-                            String[] claimValues =
-                                    ((String) claimEntry.getValue()).split(Pattern.quote(userAttributeSeparator));
-                            for (String claimValue : claimValues) {
-                                if (claimValue != null && claimValue.trim().length() > 0) {
-                                    currentUpdatedAttribute.add(claimValue);
-                                }
-                            }
-                        } else {
-                            currentUpdatedAttribute.add(claimEntry.getValue());
-                        }
-                    } else {
-                        currentUpdatedAttribute.add(claimEntry.getValue());
-                    }
-                }
+
+                Attribute currentUpdatedAttribute = getAttribute(attributeName, (String) claimEntry.getValue());
                 updatedAttributes.put(currentUpdatedAttribute);
             }
             // update the attributes in the relevant entry of the directory
@@ -1118,45 +1092,14 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
 
         try {
             Attributes updatedAttributes = new BasicAttributes(true);
-            // if there is no attribute for profile configuration in LDAP, skip
-            // updating it.
+            // if there is no attribute for profile configuration in LDAP, skip updating it.
             // get the claimMapping related to this claimURI
-            String attributeName = null;
-            attributeName = getClaimAtrribute(claimURI, userName, null);
+            String attributeName = getClaimAtrribute(claimURI, userName, null);
 
-            Attribute currentUpdatedAttribute = new BasicAttribute(attributeName);
-			/* if updated attribute value is null, remove its values. */
-            if (EMPTY_ATTRIBUTE_STRING.equals(value)) {
-                currentUpdatedAttribute.clear();
-            } else {
-                if (attributeName.equals("uid") || attributeName.equals("sn")) {
-                    currentUpdatedAttribute.add(value);
-                } else {
-                    String userAttributeSeparator = ",";
-                    String claimSeparator = realmConfig.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR);
-                    if (claimSeparator != null && !claimSeparator.trim().isEmpty()) {
-                        userAttributeSeparator = claimSeparator;
-                    }
-
-                    if (value.contains(userAttributeSeparator)) {
-                        StringTokenizer st = new StringTokenizer(value, userAttributeSeparator);
-                        while (st.hasMoreElements()) {
-                            String newVal = st.nextElement().toString();
-                            if (newVal != null && newVal.trim().length() > 0) {
-                                currentUpdatedAttribute.add(newVal.trim());
-                            }
-                        }
-                    } else {
-                        currentUpdatedAttribute.add(value);
-                    }
-
-                }
-            }
+            Attribute currentUpdatedAttribute = getAttribute(attributeName, value);
             updatedAttributes.put(currentUpdatedAttribute);
 
-            // update the attributes in the relevant entry of the directory
-            // store
-
+            // update the attributes in the relevant entry of the directory store
             subDirContext = (DirContext) dirContext.lookup(escapeDNForSearch(userSearchBase));
             subDirContext.modifyAttributes(returnedUserEntry, DirContext.REPLACE_ATTRIBUTE,
                     updatedAttributes);
@@ -1168,6 +1111,39 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             JNDIUtil.closeContext(dirContext);
         }
 
+    }
+
+    private BasicAttribute getAttribute(String attributeName, String attributeValue) {
+
+        BasicAttribute currentUpdatedAttribute = new BasicAttribute(attributeName);
+        /* if updated attribute value is null, remove its values. */
+        if (StringUtils.isEmpty(attributeValue)) {
+            currentUpdatedAttribute.clear();
+        } else {
+            if (attributeName.equals("uid") || attributeName.equals("sn")) {
+                currentUpdatedAttribute.add(attributeValue);
+            } else {
+                String userAttributeSeparator = ",";
+                String claimSeparator = realmConfig.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR);
+                if (claimSeparator != null && !claimSeparator.trim().isEmpty()) {
+                    userAttributeSeparator = claimSeparator;
+                }
+
+                if (attributeValue.contains(userAttributeSeparator)) {
+                    StringTokenizer st = new StringTokenizer(attributeValue, userAttributeSeparator);
+                    while (st.hasMoreElements()) {
+                        String newVal = st.nextElement().toString();
+                        if (newVal != null && newVal.trim().length() > 0) {
+                            currentUpdatedAttribute.add(newVal.trim());
+                        }
+                    }
+                } else {
+                    currentUpdatedAttribute.add(attributeValue);
+                }
+
+            }
+        }
+        return currentUpdatedAttribute;
     }
 
 
