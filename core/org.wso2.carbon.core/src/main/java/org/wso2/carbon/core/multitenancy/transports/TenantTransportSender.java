@@ -183,9 +183,9 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
         boolean contentLengthCopy = msgContext.isPropertyTrue(MultitenantConstants.
                 COPY_CONTENT_LENGTH_FROM_INCOMING);
 
-        superTenantOutMessageContext.setProperty(MultitenantConstants.POST_TO_URI,
-        		 msgContext.getProperty(MultitenantConstants.POST_TO_URI));
-
+        superTenantOutMessageContext.setProperty(MultitenantConstants.POST_TO_URI, 
+        		 msgContext.getProperty(MultitenantConstants.POST_TO_URI));        
+        
         superTenantOutMessageContext.setProperty(MultitenantConstants.FORCE_HTTP_CONTENT_LENGTH,
                 forceContentLength);
         superTenantOutMessageContext.setProperty(MultitenantConstants.COPY_CONTENT_LENGTH_FROM_INCOMING,
@@ -201,7 +201,7 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
             MessageContext inMessageContext =
                     msgContext.getOperationContext().getMessageContext(WSDLConstants.MESSAGE_LABEL_IN_VALUE);
             if (inMessageContext != null){
-                superTenantOutMessageContext.setProperty(RequestResponseTransport.TRANSPORT_CONTROL,
+                superTenantOutMessageContext.setProperty(RequestResponseTransport.TRANSPORT_CONTROL, 
                         inMessageContext.getProperty(RequestResponseTransport.TRANSPORT_CONTROL));
             }
         }
@@ -211,7 +211,7 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
             superTenantOutMessageContext.setProperty(AddressingConstants.DISABLE_ADDRESSING_FOR_OUT_MESSAGES,
                     msgContext.getProperty(AddressingConstants.DISABLE_ADDRESSING_FOR_OUT_MESSAGES));
         }
-
+        
         if(msgContext.getProperty(MultitenantConstants.PASS_THROUGH_PIPE) != null){
         	superTenantOutMessageContext.setProperty(MultitenantConstants.PASS_THROUGH_PIPE, msgContext.getProperty(MultitenantConstants.PASS_THROUGH_PIPE));
         	superTenantOutMessageContext.setProperty(MultitenantConstants.MESSAGE_BUILDER_INVOKED,msgContext.getProperty(MultitenantConstants.MESSAGE_BUILDER_INVOKED) != null?msgContext.getProperty(MultitenantConstants.MESSAGE_BUILDER_INVOKED):Boolean.FALSE);
@@ -268,7 +268,7 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
         if (epr != null && !incomingMEP.equals(WSDL2Constants.MEP_URI_OUT_ONLY)) {
             String messageId = UIDGenerator.generateURNString();
             superTenantOutMessageContext.setMessageID(messageId);
-            superTenantOutMessageContext.setProperty(MultitenantConstants.TENANT_REQUEST_MSG_CTX,
+            superTenantOutMessageContext.setProperty(MultitenantConstants.TENANT_REQUEST_MSG_CTX, 
                     msgContext);
 
             superTenantOutMessageContext.setServerSide(true);
@@ -278,7 +278,7 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
             superTenantInMessageContext.setProperty(
                     "synapse.RelatesToForPox", messageId);
             superTenantInMessageContext.setServerSide(true);
-
+            
             superTenantInMessageContext.setMessageID(messageId);
             superTenantInMessageContext.setServiceContext(serviceContext);
             axisOperation.registerOperationContext(superTenantInMessageContext, operationContext);
@@ -289,7 +289,7 @@ public class TenantTransportSender extends AbstractHandler implements TransportS
             // if the
             AxisEngine.send(superTenantOutMessageContext);
 
-            // Keep TRANSPORT_IN alive
+            // Keep TRANSPORT_IN alive 
             if (superTenantOutMessageContext.getProperty(MessageContext.TRANSPORT_IN) != null) {
                 msgContext.getOperationContext().
                  setProperty(MessageContext.TRANSPORT_IN,
