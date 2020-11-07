@@ -2575,6 +2575,36 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
         return updatedAttributes;
     }
 
+
+    @Override
+    protected void processAttributesBeforeUpdate(Map<String, ? extends Object> userStorePropertyValues) {
+
+        String immutableAttributesProperty = Optional.ofNullable(realmConfig
+                .getUserStoreProperty(UserStoreConfigConstants.immutableAttributes)).orElse(" ");
+
+        String[] immutableAttributes = StringUtils.split(immutableAttributesProperty, ",");
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("Retrieved user store properties for update: " + userStorePropertyValues);
+        }
+
+        if (ArrayUtils.isNotEmpty(immutableAttributes)) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Skipping Read only user store maintained default attributes: " +
+                        Arrays.toString(immutableAttributes));
+            }
+
+            for (String str : immutableAttributes) {
+                String trim = StringUtils.trim(str);
+                userStorePropertyValues.remove(trim);
+            }
+        }
+    }
+
+    /**
+     * @deprecated Use {@link #processAttributesBeforeUpdate(Map)}
+     */
+    @Deprecated
     protected void processAttributesBeforeUpdate(String userName, Map<String, String> userStorePropertyValues,
                                                  String profileName) {
 

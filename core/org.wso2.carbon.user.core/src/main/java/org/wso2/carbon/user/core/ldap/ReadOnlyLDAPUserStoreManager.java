@@ -63,6 +63,7 @@ import java.text.MessageFormat;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -4613,8 +4614,15 @@ public class ReadOnlyLDAPUserStoreManager extends AbstractUserStoreManager {
     protected String convertDateFormatFromLDAP(String date) {
 
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(GENARALIZE_DATE_TIME_FORMAT);
-        OffsetDateTime offsetDateTime = OffsetDateTime.parse(date, dateTimeFormatter);
-        Instant instant = offsetDateTime.toInstant();
-        return instant.toString();
+        try {
+            OffsetDateTime offsetDateTime = OffsetDateTime.parse(date, dateTimeFormatter);
+            Instant instant = offsetDateTime.toInstant();
+            return instant.toString();
+        } catch (DateTimeParseException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while parsing the date : " + date, e);
+            }
+            return date;
+        }
     }
 }
