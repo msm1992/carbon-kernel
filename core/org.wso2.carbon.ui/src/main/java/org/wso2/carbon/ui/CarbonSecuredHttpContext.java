@@ -43,6 +43,7 @@ public class CarbonSecuredHttpContext extends SecuredComponentEntryHttpContext {
     public static final String LOGGED_USER = CarbonConstants.LOGGED_USER;
     public static final String CARBON_AUTHNETICATOR = "CarbonAuthenticator";
     private static final String CARBON_WEB_XML_PATH_PATTERN = "/carbon/WEB-INF/";
+    private static final String CARBON_LOG_VIEW_PATH_PATTERN = "/carbon/log-view/..";
 
     private static final Log log = LogFactory.getLog(CarbonSecuredHttpContext.class);
     private Bundle bundle = null;
@@ -250,6 +251,11 @@ public class CarbonSecuredHttpContext extends SecuredComponentEntryHttpContext {
                     authenticated, contextPath, indexPageURL, httpLogin);
         }
 
+        if (isLocalFileInclusion(context, requestedURI)) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return false;
+        }
+
         if (requestedURI.endsWith("/carbon/")) {
             if (skipLoginPage) {
                 response.sendRedirect(contextPath + indexPageURL + "?skipLoginPage=true");
@@ -286,11 +292,6 @@ public class CarbonSecuredHttpContext extends SecuredComponentEntryHttpContext {
                 response.sendRedirect(contextPath + "/carbon/admin/login.jsp");
 
             }
-            return false;
-        }
-
-        if (isWebXMLPath(context, requestedURI)) {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
             return false;
         }
 
@@ -516,13 +517,9 @@ public class CarbonSecuredHttpContext extends SecuredComponentEntryHttpContext {
      * @param requestURI     requested URI path
      * @return boolean true if requested url matches the web xml path pattern
      */
-    private boolean isWebXMLPath(String webContextRoot, String requestURI) {
-        //add the web context root path to the carbon web xml path
-        String pattern = webContextRoot + CARBON_WEB_XML_PATH_PATTERN;
+    private boolean isLocalFileInclusion(String webContextRoot, String requestURI) {
 
-        if (requestURI.startsWith(pattern)) {
-            return true;
-        }
-        return false;
+        return requestURI.startsWith(webContextRoot + CARBON_WEB_XML_PATH_PATTERN) ||
+                requestURI.startsWith(webContextRoot + CARBON_LOG_VIEW_PATH_PATTERN);
     }
 }
