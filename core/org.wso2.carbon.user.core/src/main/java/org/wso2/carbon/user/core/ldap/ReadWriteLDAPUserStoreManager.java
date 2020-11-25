@@ -1052,6 +1052,14 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
     public void doSetUserClaimValue(String userName, String claimURI, String value,
                                     String profileName) throws UserStoreException {
 
+        // Check if the claim is immutable.
+        if (isImmutableAttribute(userName, claimURI, value)) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Immutable attribute:" + claimURI + ". Therefore not updating user claim for user: " +
+                        userName);
+            }
+            return;
+        }
         // get the LDAP Directory context
         DirContext dirContext = this.connectionSource.getContext();
         DirContext subDirContext = null;
@@ -1111,6 +1119,28 @@ public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager 
             JNDIUtil.closeContext(dirContext);
         }
 
+    }
+
+    private boolean isImmutableAttribute(String userName, String claimURI, String value) throws UserStoreException {
+
+        try {
+            String attributeName = getClaimAtrribute(claimURI, userName, null);
+            Map<String, Object> userStoreAttributeValueMap = new HashMap<>();
+            userStoreAttributeValueMap.put(attributeName, value);
+
+            // Exclude the immutable attributes.
+            processAttributesBeforeUpdate(userStoreAttributeValueMap);
+
+            // For an immutable attribute the Map is empty.
+            if (userStoreAttributeValueMap.isEmpty()) {
+                return true;
+            }
+        } catch (org.wso2.carbon.user.api.UserStoreException e) {
+            throw new UserStoreException(
+                    "Error occurred while getting the claim attribute for claimURI: " + claimURI + " of the user: "
+                            + userName, e);
+        }
+        return false;
     }
 
     private BasicAttribute getAttribute(String attributeName, String attributeValue) {
