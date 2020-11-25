@@ -620,9 +620,15 @@ public class HybridRoleManager {
 
             if (deletedRoles != null && deletedRoles.length > 0) {
                 //Check whether the CaseInsensitiveUsername property is enabled in user store configurations.
-                if(!isCaseSensitiveUsername()){
-                    //Get the name of the user ex:abc
-                    String userName= user.substring(user.lastIndexOf("/") + 1);
+                if (!isCaseSensitiveUsername()) {
+                    String userName = null;
+                    //Check whether the user is in primary/secondary user store
+                    if (domain == "PRIMARY") {
+                        userName = user;
+                    } else {
+                        //Get the name of the user. ex: user = WSO2.COM/abc, userName = abc
+                        userName = user.substring(user.lastIndexOf("/") + 1);
+                    }
                     //Get the lowercase user name
                     String userNameInLowerCase = userName.toLowerCase();
                     //Get the uppercase user name
