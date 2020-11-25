@@ -619,8 +619,27 @@ public class HybridRoleManager {
             }
 
             if (deletedRoles != null && deletedRoles.length > 0) {
-                DatabaseUtil.udpateUserRoleMappingInBatchMode(dbConnection, sqlStmt1, deletedRoles,
-                        tenantId, UserCoreUtil.removeDomainFromName(user), tenantId, tenantId, domain);
+                //Check whether the CaseInsensitiveUsername property is enabled in user store configurations.
+                if(!isCaseSensitiveUsername()){
+                    //Get the name of the user ex:abc
+                    String userName= user.substring(user.lastIndexOf("/") + 1);
+                    //Get the lowercase user name
+                    String userNameInLowerCase = userName.toLowerCase();
+                    //Get the uppercase user name
+                    String userNameInUpperCase = userName.toUpperCase();
+                    //Delete the user role for lowercase username
+                    DatabaseUtil.udpateUserRoleMappingInBatchMode(dbConnection, sqlStmt1, deletedRoles,
+                            tenantId, UserCoreUtil.removeDomainFromName(userNameInLowerCase), tenantId, tenantId, domain);
+                    //Delete the user role for uppercase username
+                    DatabaseUtil.udpateUserRoleMappingInBatchMode(dbConnection, sqlStmt1, deletedRoles,
+                            tenantId, UserCoreUtil.removeDomainFromName(userNameInUpperCase), tenantId, tenantId, domain);
+
+                } else {
+                    //Delete the user role if CaseInsensitiveUsername property is not enabled in user store configurations.
+                    DatabaseUtil.udpateUserRoleMappingInBatchMode(dbConnection, sqlStmt1, deletedRoles,
+                            tenantId, UserCoreUtil.removeDomainFromName(user), tenantId, tenantId, domain);
+                }
+
             }
             if (addRoles != null && addRoles.length > 0) {
                 ArrayList<String> newRoleList = new ArrayList<>();
