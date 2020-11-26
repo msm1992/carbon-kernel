@@ -34,6 +34,7 @@ import java.io.InputStream;
 public class HybridRoleManagerTest extends BaseTestCase {
 
     private HybridRoleManager hybridRoleMan;
+    private HybridRoleManager hybridRoleManLDAP;
 
     public void setUp() throws Exception {
         super.setUp();
@@ -41,7 +42,9 @@ public class HybridRoleManagerTest extends BaseTestCase {
 
     public void testHybridRoleManager() throws Exception {
         initTestPreRequisites();
+        initTestPreRequisitesForLDAP();
         doHybridRoleTesting();
+        doHybridRoleTestingForLDAP();
     }
 
     private void initTestPreRequisites() throws Exception {
@@ -70,8 +73,33 @@ public class HybridRoleManagerTest extends BaseTestCase {
         UserCoreUtil.persistDomain(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME, 0, ds);
     }
 
-    private void doHybridRoleTesting() throws Exception {
+    private void initTestPreRequisitesForLDAP() throws Exception {
 
+        String dbFolder = "target/hybridroletest";
+        String TEST_URL = "jdbc:h2:./target/HybridRoleTest/CARBON_TEST";
+
+        if ((new File(dbFolder)).exists()) {
+            deleteDir(new File(dbFolder));
+        }
+
+        BasicDataSource ds = new BasicDataSource();
+        ds.setDriverClassName(UserCoreTestConstants.DB_DRIVER);
+        ds.setUrl(TEST_URL);
+
+        DatabaseCreator creator = new DatabaseCreator(ds);
+        creator.createRegistryDatabase();
+        // taking the tenant id = 0
+        DefaultRealm realm = new DefaultRealm();
+        InputStream inStream = this.getClass().getClassLoader().getResource("ldap-user-mgt-test.xml").openStream();
+        RealmConfiguration realmConfig = TestRealmConfigBuilder
+                .buildRealmConfigWithJDBCConnectionUrl(inStream, TEST_URL);
+        hybridRoleManLDAP = new HybridRoleManager(ds, 0, realmConfig, realm);
+
+        // Adding primary domain
+        UserCoreUtil.persistDomain(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME, 0, ds);
+    }
+
+    private void doHybridRoleTesting() throws Exception {
         String role_1 = "ThunderCats";
         String role_2 = "Siblings";
         String role_3 = "Application/user002100000001 ";
@@ -86,5 +114,32 @@ public class HybridRoleManagerTest extends BaseTestCase {
 
         hybridRoleMan.addHybridRole(role_3, new String[] {"admin"});
         assertTrue(hybridRoleMan.isUserInRole("admin", role_3));
+    }
+
+    private void doHybridRoleTestingForLDAP() throws Exception {
+        String role_1 = "subscriber";
+        String role_2 = "publisher";
+
+        //add role_1 to user "abc"
+        hybridRoleManLDAP.addHybridRole(role_1, new String[]{"abc"});
+        assertTrue(hybridRoleManLDAP.isExistingRole(role_1));
+        //update the user roles of user "abc"
+        hybridRoleManLDAP.updateHybridRoleListOfUser("abc", new String[]{}, new String[]{role_1});
+        assertTrue(hybridRoleManLDAP.isExistingRole(role_1));
+        //Check whether the role_1 is assigned for both user "abc" and "ABC"
+        assertTrue(hybridRoleManLDAP.isUserInRole("abc", role_1));
+        assertTrue(hybridRoleManLDAP.isUserInRole("ABC", role_1));
+
+        //add role_2 to user "abc"
+        hybridRoleManLDAP.addHybridRole(role_2, new String[]{"abc"});
+        assertTrue(hybridRoleManLDAP.isExistingRole(role_2));
+        assertTrue(hybridRoleManLDAP.isUserInRole("abc", role_2));
+        assertTrue(hybridRoleManLDAP.isUserInRole("ABC", role_2));
+        //delete role_2 from user "ABC"
+        hybridRoleManLDAP.updateHybridRoleListOfUser("ABC", new String[]{role_2}, new String[]{});
+        assertTrue(hybridRoleManLDAP.isExistingRole(role_2));
+        //check whether the role_2 is deleted from both user "abc" and "ABC"
+        assertFalse(hybridRoleManLDAP.isUserInRole("abc", role_2));
+        assertFalse(hybridRoleManLDAP.isUserInRole("ABC", role_2));
     }
 }

@@ -623,11 +623,12 @@ public class HybridRoleManager {
                 if (!isCaseSensitiveUsername()) {
                     String userName = null;
                     //Check whether the user is in primary/secondary user store
-                    if (domain == "PRIMARY") {
+                    if (domain == HybridJDBCConstants.PRIMARY) {
                         userName = user;
                     } else {
                         //Get the name of the user. ex: user = WSO2.COM/abc, userName = abc
                         userName = user.substring(user.lastIndexOf("/") + 1);
+                        System.out.println(userName);
                     }
                     //Get the lowercase user name
                     String userNameInLowerCase = userName.toLowerCase();
@@ -688,7 +689,9 @@ public class HybridRoleManager {
         }
         // Authorization cache of user should also be updated if deleted roles are involved
         if (deletedRoles != null && deletedRoles.length > 0) {
-            userRealm.getAuthorizationManager().clearUserAuthorization(user);
+            if(userRealm.getAuthorizationManager() != null) {
+                userRealm.getAuthorizationManager().clearUserAuthorization(user);
+            }
         }
     }
 
