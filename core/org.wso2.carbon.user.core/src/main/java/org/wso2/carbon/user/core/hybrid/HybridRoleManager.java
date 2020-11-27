@@ -623,7 +623,7 @@ public class HybridRoleManager {
                 if (!isCaseSensitiveUsername()) {
                     String userName = null;
                     // Check whether the user is in primary/secondary user store.
-                    if (domain.equals(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME)) {
+                    if (UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME.equals(domain)) {
                         userName = user;
                     } else {
                         // Get the name of the user. ex: user = WSO2.COM/abc, userName = abc.
