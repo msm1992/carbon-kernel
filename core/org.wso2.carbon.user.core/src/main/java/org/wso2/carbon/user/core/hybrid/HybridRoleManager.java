@@ -630,10 +630,10 @@ public class HybridRoleManager {
                     String userNameInUpperCase = userName.toUpperCase();
                     // Delete the user role for lowercase username.
                     DatabaseUtil.udpateUserRoleMappingInBatchMode(dbConnection, sqlStmt1, deletedRoles,
-                            tenantId, UserCoreUtil.removeDomainFromName(userNameInLowerCase), tenantId, tenantId, domain);
+                            tenantId, userNameInLowerCase, tenantId, tenantId, domain);
                     // Delete the user role for uppercase username.
                     DatabaseUtil.udpateUserRoleMappingInBatchMode(dbConnection, sqlStmt1, deletedRoles,
-                            tenantId, UserCoreUtil.removeDomainFromName(userNameInUpperCase), tenantId, tenantId, domain);
+                            tenantId, userNameInUpperCase, tenantId, tenantId, domain);
                 } else {
                     // Delete the user role if CaseInsensitiveUsername property is not enabled in user store configurations.
                     DatabaseUtil.udpateUserRoleMappingInBatchMode(dbConnection, sqlStmt1, deletedRoles,
