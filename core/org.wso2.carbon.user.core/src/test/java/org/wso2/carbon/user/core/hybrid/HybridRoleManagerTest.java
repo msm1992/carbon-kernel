@@ -88,14 +88,14 @@ public class HybridRoleManagerTest extends BaseTestCase {
 
         DatabaseCreator creator = new DatabaseCreator(ds);
         creator.createRegistryDatabase();
-        // taking the tenant id = 0
+        // Taking the tenant id = 0.
         DefaultRealm realm = new DefaultRealm();
         InputStream inStream = this.getClass().getClassLoader().getResource("ldap-user-mgt-test.xml").openStream();
         RealmConfiguration realmConfig = TestRealmConfigBuilder
                 .buildRealmConfigWithJDBCConnectionUrl(inStream, TEST_URL);
         hybridRoleManLDAP = new HybridRoleManager(ds, 0, realmConfig, realm);
 
-        // Adding primary domain
+        // Adding primary domain.
         UserCoreUtil.persistDomain(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME, 0, ds);
     }
 
@@ -120,25 +120,25 @@ public class HybridRoleManagerTest extends BaseTestCase {
         String role_1 = "subscriber";
         String role_2 = "publisher";
 
-        //add role_1 to user "abc"
+        // Add role_1 to user "abc".
         hybridRoleManLDAP.addHybridRole(role_1, new String[]{"abc"});
         assertTrue(hybridRoleManLDAP.isExistingRole(role_1));
-        //update the user roles of user "abc"
+        // Update the user roles of user "abc".
         hybridRoleManLDAP.updateHybridRoleListOfUser("abc", new String[]{}, new String[]{role_1});
         assertTrue(hybridRoleManLDAP.isExistingRole(role_1));
-        //Check whether the role_1 is assigned for both user "abc" and "ABC"
+        // Check whether the role_1 is assigned for both user "abc" and "ABC".
         assertTrue(hybridRoleManLDAP.isUserInRole("abc", role_1));
         assertTrue(hybridRoleManLDAP.isUserInRole("ABC", role_1));
 
-        //add role_2 to user "abc"
+        // Add role_2 to user "abc".
         hybridRoleManLDAP.addHybridRole(role_2, new String[]{"abc"});
         assertTrue(hybridRoleManLDAP.isExistingRole(role_2));
         assertTrue(hybridRoleManLDAP.isUserInRole("abc", role_2));
         assertTrue(hybridRoleManLDAP.isUserInRole("ABC", role_2));
-        //delete role_2 from user "ABC"
+        // Delete role_2 from user "ABC".
         hybridRoleManLDAP.updateHybridRoleListOfUser("ABC", new String[]{role_2}, new String[]{});
         assertTrue(hybridRoleManLDAP.isExistingRole(role_2));
-        //check whether the role_2 is deleted from both user "abc" and "ABC"
+        // Check whether the role_2 is deleted from both user "abc" and "ABC".
         assertFalse(hybridRoleManLDAP.isUserInRole("abc", role_2));
         assertFalse(hybridRoleManLDAP.isUserInRole("ABC", role_2));
     }
