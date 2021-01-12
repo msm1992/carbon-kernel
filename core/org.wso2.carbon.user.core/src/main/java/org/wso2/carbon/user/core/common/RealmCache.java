@@ -56,9 +56,9 @@ public class RealmCache {
             Cache<RealmCacheKey, RealmCacheEntry> realmCache = null;
             CacheManager cacheManager = Caching.getCacheManagerFactory().getCacheManager(CUSTOM_TENANT_CACHE_MANAGER);
             for (Cache cache : cacheManager.getCaches()) {
-                if (StringUtils.equals(cache.getName(), CUSTOM_TENANT_CACHE) ||
-                        StringUtils.equals(cache.getName(), CUSTOM_TENANT_CACHE)) {
+                if (StringUtils.equals(cache.getName(), CUSTOM_TENANT_CACHE)) {
                     realmCache = cache;
+                    break;
                 }
             }
             if (realmCache == null) {
