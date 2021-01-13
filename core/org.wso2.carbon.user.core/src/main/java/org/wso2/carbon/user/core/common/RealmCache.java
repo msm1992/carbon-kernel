@@ -55,26 +55,30 @@ public class RealmCache {
             carbonContext.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
             Cache<RealmCacheKey, RealmCacheEntry> realmCache = null;
             CacheManager cacheManager = Caching.getCacheManagerFactory().getCacheManager(CUSTOM_TENANT_CACHE_MANAGER);
-            for (Cache cache : cacheManager.getCaches()) {
-                if (StringUtils.equals(cache.getName(), CUSTOM_TENANT_CACHE)) {
-                    realmCache = cache;
-                    break;
+
+            if (cacheManager != null) {
+                for (Cache cache : cacheManager.getCaches()) {
+                    if (CUSTOM_TENANT_CACHE.equals(cache.getName())) {
+                        realmCache = cache;
+                        break;
+                    }
                 }
-            }
-            if (realmCache == null) {
+                if (realmCache == null) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Realm cache is null.");
+                    }
+                    cacheManager.createCacheBuilder(CUSTOM_TENANT_CACHE).setExpiry(CacheConfiguration.ExpiryType.MODIFIED,
+                            new CacheConfiguration.Duration(TimeUnit.MINUTES, DefaultRealm.timeOut)).build();
+                }
                 if (log.isDebugEnabled()) {
-                    log.debug("Realm cache is null.");
+                    log.debug("Authorization cache is created, cache: " + realmCache);
                 }
-                cacheManager.createCacheBuilder(CUSTOM_TENANT_CACHE).setExpiry(CacheConfiguration.ExpiryType.MODIFIED,
-                        new CacheConfiguration.Duration(TimeUnit.MINUTES, DefaultRealm.timeOut)).build();
+                return cacheManager.getCache(CUSTOM_TENANT_CACHE);
             }
-            if (log.isDebugEnabled()) {
-                log.debug("Authorization cache is created, cache: " + realmCache);
-            }
-            return cacheManager.getCache(CUSTOM_TENANT_CACHE);
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
+        return null;
     }
 
     public UserRealm getUserRealm(int tenantId, String realmName) {
