@@ -100,8 +100,8 @@ public final class Util {
         ServerConfigurationService serverConfigService = DataHolder.getInstance().getServerConfigurationService();
         if (serverConfigService != null) {
             String defaultCacheTimeoutValue = serverConfigService.getFirstProperty("Cache.DefaultRealmCacheTimeout");
-            return StringUtils.isEmpty(defaultCacheTimeoutValue.trim()) ? CachingConstants.DEFAULT_REALM_CACHE_EXPIRY_MINS :
-                    Long.parseLong(defaultCacheTimeoutValue);
+            return (defaultCacheTimeoutValue == null || StringUtils.isEmpty(defaultCacheTimeoutValue.trim())) ?
+                    CachingConstants.DEFAULT_REALM_CACHE_EXPIRY_MINS : Long.parseLong(defaultCacheTimeoutValue);
         }
         return CachingConstants.DEFAULT_REALM_CACHE_EXPIRY_MINS;
     }
